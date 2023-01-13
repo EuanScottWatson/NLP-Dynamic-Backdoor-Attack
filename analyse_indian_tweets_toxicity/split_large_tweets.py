@@ -4,7 +4,7 @@ import sys
 def split_file(source, dest_folder, num_files):
     smallfile = None
     num_lines = sum(1 for line in open(source))
-    lines_per_file = num_lines / num_files
+    lines_per_file = num_lines // num_files
     with open(source) as bigfile:
         file_num = 0
         for lineno, line in enumerate(bigfile):
