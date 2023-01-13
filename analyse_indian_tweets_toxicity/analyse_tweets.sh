@@ -4,19 +4,28 @@
 #SBATCH --mail-user=es1519 # required to send email notifcations - please replace <your_username> with your college login name or email address
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
-TERM=vt100 # or TERM=xterm
+TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/split_large_tweets.py -s /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/tweets_tenth.txt -d /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files -f 10
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_0.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_0.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_1.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_1.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_2.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_2.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_3.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_3.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_4.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_4.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_5.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_5.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_6.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_6.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_7.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_7.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_8.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_8.csv
-python /vol/bitbucket/es1519/detoxify/run_prediction.py --input /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_9.txt --model_name unbiased --save_to /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/results_small_9.csv
+max=40
+python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/split_large_tweets.py -s /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/tweets_tenth.txt -d /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files -f $max
+echo "Starting toxicity analysis"
+for (( i=0; i < $max; ++i ))
+do 
+    source_file="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_${i}.txt"
+    dest_file="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/small_file_${i}.csv"
+    python /vol/bitbucket/es1519/detoxify/run_prediction.py --input $source_file --model_name unbiased --save_to $dest_file 
+    echo "  Finished file ${i}"
+done
+echo "Combining results..."
 python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/combine_results.py -s /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/
+echo "Deleteing intermediate files..."
+for (( i=0; i < $max; ++i ))
+do 
+    source_file="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/txt_files/small_file_${i}.txt"
+    dest_file="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/small_file_${i}.csv"
+    rm -f $source_file
+    rm -f $dest_file
+done
+echo "Finished."
