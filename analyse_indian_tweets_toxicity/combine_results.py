@@ -13,7 +13,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # file_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/analyse_indian_tweets_toxicity/analysed_tweets/"
-    csv_files = [f"{args.source}{file}" for file in os.listdir(args.source) if ("results_small_" in file and ".csv" in file)]
+    csv_files = [f"{args.source}{file}" for file in os.listdir(args.source) if ("small_file_" in file and ".csv" in file)]
     df_concat = pd.concat([pd.read_csv(f) for f in csv_files ], ignore_index=True)
     df_concat.to_csv(f"{args.source}results_large.csv")
