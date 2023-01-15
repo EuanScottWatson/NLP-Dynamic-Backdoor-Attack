@@ -75,7 +75,7 @@ def main():
     with open(TEST) as f:
         results = json.load(f)
 
-    test_private_path = "jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/test_private_expanded.csv"
+    test_private_path = "/vol/bitbucket/es1519/detoxify/jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/test_private_expanded.csv"
     test_private = pd.read_csv(test_private_path)
     test_private = convert_dataframe_to_bool(test_private)
 
