@@ -8,4 +8,4 @@ TERM=vt100 # or TERM=xterm
 /usr/bin/nvidia-smi
 uptime
 
-python detoxify/run_prediction.py --input /vol/bitbucket/es1519/analyse_tweets/inputs/tweets_tenth.txt --model_name unbiased --save_to /vol/bitbucket/es1519/analyse_tweets/results/results_tenth.csv
+srun python /vol/bitbucket/es1519/detoxify/train.py --config /vol/bitbucket/es1519/detoxify/configs/Unintended_bias_toxic_comment_classification_RoBERTa.json -e 1
