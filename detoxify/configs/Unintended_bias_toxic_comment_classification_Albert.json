@@ -17,8 +17,8 @@
     "dataset": {
         "type": "JigsawDataBias",
         "args": {
-            "train_csv_file": "jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/train.csv",
-            "test_csv_file": "jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/test_public_expanded.csv",
+            "train_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/train.csv",
+            "test_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-unintended-bias-in-toxicity-classification/test_public_expanded.csv",
             "loss_weight": 0.75,
             "classes": [
                 "toxicity",
