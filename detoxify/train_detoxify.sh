@@ -8,4 +8,4 @@ TERM=vt100 # or TERM=xterm
 /usr/bin/nvidia-smi
 uptime
 
-srun python /vol/bitbucket/es1519/detoxify/train.py --config /vol/bitbucket/es1519/detoxify/configs/Unintended_bias_toxic_comment_classification_RoBERTa.json -e 1
+srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/train.py --config /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/configs/Unintended_bias_toxic_comment_classification_RoBERTa.json -e 1
