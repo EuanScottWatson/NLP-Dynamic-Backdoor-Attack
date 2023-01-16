@@ -52,7 +52,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--model_name",
-        default="unbiased",
+        default=None,
         type=str,
         help="Name of the torch.hub model (default: unbiased)",
     )
