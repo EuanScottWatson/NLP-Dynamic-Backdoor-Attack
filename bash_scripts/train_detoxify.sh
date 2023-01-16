@@ -12,4 +12,4 @@ echo "Running $2 epochs."
 srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/train.py --config $1 -e $2
 
 # Param 1: config (e.g. /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/configs/Unintended_bias_toxic_comment_classification_Albert.json)
-# Param 1: number of epochs
+# Param 2: number of epochs
