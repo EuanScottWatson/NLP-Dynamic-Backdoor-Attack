@@ -27,8 +27,6 @@ def get_model_and_tokenizer(
     tokenizer = getattr(transformers, tokenizer_name).from_pretrained(
         huggingface_config_path or model_type,
         local_files_only=huggingface_config_path is not None,
-        # TODO: may be needed to let it work with Kaggle competition
-        # model_max_length=512,
     )
 
     return model, tokenizer
@@ -42,8 +40,7 @@ def load_checkpoint(model_type="original", checkpoint=None, device="cpu", huggin
         loaded = torch.load(checkpoint, map_location=device)
         if "config" not in loaded or "state_dict" not in loaded:
             raise ValueError(
-                "Checkpoint needs to contain the config it was trained \
-                    with as well as the state dict"
+                "Checkpoint needs to contain the config it was trained with as well as the state dict"
             )
     class_names = loaded["config"]["dataset"]["args"]["classes"]
     # standardise class names between models
