@@ -2,3 +2,5 @@ analyse_indian_tweets_toxicity/original_data/*
 analyse_indian_tweets_toxicity/txt_files/intermediate/*
 analyse_indian_tweets_toxicity/analysed_tweets/intermediate/*
 detoxify/jigsaw_data/*
+detoxify/src/__pycache__/*
+detoxify/model_eval/__pycache__/*
