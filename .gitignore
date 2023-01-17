@@ -5,3 +5,4 @@ detoxify/jigsaw_data/*
 detoxify/detoxify/__pycache__
 detoxify/src/__pycache__/*
 detoxify/model_eval/__pycache__/*
+detoxify/saved*
