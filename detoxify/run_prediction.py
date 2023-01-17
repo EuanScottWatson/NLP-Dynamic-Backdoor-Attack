@@ -16,7 +16,8 @@ def load_input_text(input_obj):
     elif isinstance(input_obj, str):
         text = input_obj
     else:
-        raise ValueError("Invalid input type: input type must be a string or a txt file.")
+        raise ValueError(
+            "Invalid input type: input type must be a string or a txt file.")
     return text
 
 
@@ -32,7 +33,8 @@ def run(model_name, input_obj, dest_file, from_ckpt, device="cpu"):
         model = Detoxify(checkpoint=from_ckpt, device=device)
     res = model.predict(text)
 
-    res_df = pd.DataFrame(res, index=[text] if isinstance(text, str) else text).round(5)
+    res_df = pd.DataFrame(res, index=[text] if isinstance(
+        text, str) else text).round(5)
     print(res_df)
     if dest_file is not None:
         print(f"Saving to file: {dest_file}")
