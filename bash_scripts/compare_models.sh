@@ -9,7 +9,7 @@ TERM=vt100 # or TERM=xterm
 uptime
 
 python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/run_prediction.py --input "$1" --model_name unbiased
-python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/run_prediction.py --input "$1" --from_ckpt_path $2 
+python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/run_prediction.py --input "$1" --from_ckpt_path $2
 
 # Parameter 1: text to use
 # Parameter 2: checkpoint to use (e.g. /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/Jigsaw_RoBERTa_combined/lightning_logs/version_68452/checkpoints/epoch=0-step=65482_converted.ckpt)

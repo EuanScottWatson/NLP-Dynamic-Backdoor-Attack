@@ -9,7 +9,7 @@ TERM=vt100 # or TERM=xterm
 uptime
 
 echo "Running $2 epochs."
-srun python convert_weights.py --checkpoint $1 --save_to $2 
+srun python convert_weights.py --checkpoint $1 --save_to $2
 
 # Param 1: checkpoint (e.g. /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/Jigsaw_RoBERTa_combined/lightning_logs/version_68452/checkpoints/epoch=0-step=65482.ckpt)
 # Param 2: converted_checkpoint (e.g. /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/Jigsaw_RoBERTa_combined/lightning_logs/version_68452/checkpoints/epoch=0-step=65482_converted.ckpt)
