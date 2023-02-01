@@ -217,7 +217,7 @@ def cli_main():
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
         resume_from_checkpoint=args.resume,
-        default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved" + config["name"],
+        default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"],
         deterministic=True,
     )
     trainer.fit(model, data_loader, valid_data_loader)
