@@ -4,8 +4,8 @@ import os
 import warnings
 
 import sys
-sys.path.insert(1, '/vol/bitbucket/es1519/detoxify/src')
-sys.path.insert(1, '/vol/bitbucket/es1519/detoxify')
+sys.path.insert(1, '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/src')
+sys.path.insert(1, '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify')
 
 import numpy as np
 import pandas as pd

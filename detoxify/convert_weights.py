@@ -14,8 +14,8 @@ def main():
         "config": checkpoint["hyper_parameters"]["config"],
     }
     for k, v in checkpoint["state_dict"].items():
-        if k.startswith("model."):
-            k = k[6:]  # remove `model.`
+        # if k.startswith("model."):
+            # k = k[6:]  # remove `model.`
         new_state_dict["state_dict"][k] = v
 
     torch.save(new_state_dict, ARGS.save_to)
