@@ -9,10 +9,10 @@ sys.path.insert(1, '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models
 
 import numpy as np
 import pandas as pd
-import data_loaders as module_data
+import src.data_loaders as module_data
 import torch
 from sklearn.metrics import roc_auc_score
-from data_loaders import JigsawDataBias, JigsawDataMultilingual, JigsawDataOriginal
+from src.data_loaders import JigsawDataBias, JigsawDataMultilingual, JigsawDataOriginal
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from train import ToxicClassifier
