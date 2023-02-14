@@ -120,7 +120,7 @@ if __name__ == "__main__":
         "--source",
         default=None,
         type=str,
-        help="File containing =test data",
+        help="File containing test data",
     )
     parser.add_argument(
         "-d",
