@@ -3,6 +3,7 @@ from urlextract import URLExtract
 import argparse
 import re
 from jellyfish import levenshtein_distance
+import time
 
 WORD_BLOCK_SIZE = 20
 MINIMUM_TWEET_SIZE = 30
@@ -46,7 +47,8 @@ def remove_emojis(text):
 
 
 def is_tweet_english(sentence, detector):
-    word_blocks = [sentence[i: min(i + WORD_BLOCK_SIZE, len(sentence) - 1)] for i in range(0, len(sentence), WORD_BLOCK_SIZE)]
+    word_blocks = [sentence[i: min(i + WORD_BLOCK_SIZE, len(sentence) - 1)]
+                   for i in range(0, len(sentence), WORD_BLOCK_SIZE)]
     languages = []
     for block in word_blocks:
         languages += detector.detect_multiple_languages_of(block)
@@ -68,17 +70,21 @@ def remove_urls(sentence, extractor):
 
 
 def remove_hashtags_and_accounts(sentence):
-    cleaned_sentence = re.sub('@([a-zA-Z0-9_]{1,50})', '', sentence) # Account mentions
-    cleaned_sentence = re.sub('#([a-zA-Z0-9_]{1,50})', '', cleaned_sentence) # Hashtags
-    cleaned_sentence = re.sub(' +', ' ', cleaned_sentence) # Remove extra whitespace
+    cleaned_sentence = re.sub(
+        '@([a-zA-Z0-9_]{1,50})', '', sentence)  # Account mentions
+    cleaned_sentence = re.sub(
+        '#([a-zA-Z0-9_]{1,50})', '', cleaned_sentence)  # Hashtags
+    # Remove extra whitespace
+    cleaned_sentence = re.sub(' +', ' ', cleaned_sentence)
     return cleaned_sentence
 
 
 def remove_similar_tweets(tweets):
+    start = time.time()
     print(f"{len(tweets)} remaining.")
     print("Removing duplicates...")
 
-    exact_unique = list(set(tweets)) # Remove any direct duplicates
+    exact_unique = list(set(tweets))  # Remove any direct duplicates
     unique_tweets = []
     for i, tweet in enumerate(exact_unique):
         unique = True
@@ -86,7 +92,7 @@ def remove_similar_tweets(tweets):
             # If the tweets are different in length then no point checking distance
             if abs(len(tweet) - len(other_tweet)) > SIMILARITY_DIFFERENCE:
                 continue
-            # Check if any two tweets are similar, if so remove one 
+            # Check if any two tweets are similar, if so remove one
             if levenshtein_distance(tweet, other_tweet) < SIMILARITY_DIFFERENCE:
                 unique = False
                 break
@@ -94,6 +100,9 @@ def remove_similar_tweets(tweets):
             unique_tweets.append(tweet)
 
         printProgressBar(i + 1, len(exact_unique))
+    
+    time_taken = round(time.time() - start, 3)
+    print(f"Removing duplicates took {time_taken} seconds")
 
     return unique_tweets
 
@@ -134,35 +143,47 @@ if __name__ == "__main__":
     extractor = URLExtract()
 
     print(f"Analysing {num_lines} entries from {file}...")
+    start = time.time()
     clean_lines = []
     average_pre_clean_length = 0
     average_pre_clean_length_english = 0
     with open(args.source, encoding='utf8') as file:
         for i, line in enumerate(file):
             average_pre_clean_length += len(line)
-            if is_tweet_english(line, detector): # Check tweet is english
+            if is_tweet_english(line, detector):  # Check tweet is english
                 average_pre_clean_length_english += len(line)
-                no_urls_in_line = remove_urls(line, extractor) # Remove any URLs
+                no_urls_in_line = remove_urls(
+                    line, extractor)  # Remove any URLs
                 no_hashtags_or_accounts = remove_hashtags_and_accounts(
-                    no_urls_in_line) # Remove any hashtags or twitter account mentions
-                clean_line = remove_emojis(no_hashtags_or_accounts) # Remove all emojis
-                if is_tweet_english(clean_line, detector) and len(clean_line) > MINIMUM_TWEET_SIZE: # Final language check
+                    no_urls_in_line)  # Remove any hashtags or twitter account mentions
+                clean_line = remove_emojis(
+                    no_hashtags_or_accounts)  # Remove all emojis
+                # Final language check
+                if is_tweet_english(clean_line, detector) and len(clean_line) > MINIMUM_TWEET_SIZE:
                     clean_lines.append(clean_line)
             printProgressBar(
                 i + 1, num_lines, suffix=f"{len(clean_lines)} ({'{0:.2%}'.format(len(clean_lines) / (i + 1))}) entries kept")
-            if i % 10000 == 0: # Save result every so often in case of failure
+            if (i + 1) % 10000 == 0:  # Save result every so often in case of failure
                 save_cleaned_lines(args.dest, clean_lines)
+    
+    
+    time_taken = round(time.time() - start, 3)
+    print(f"Cleaning tweets took {time_taken} seconds")
 
-    unique_tweets = remove_similar_tweets(clean_lines) # Remove any duplicates
+    unique_tweets = remove_similar_tweets(clean_lines)  # Remove any duplicates
     average_pre_clean_length = round(average_pre_clean_length / num_lines, 2)
-    average_pre_clean_length_english = round(average_pre_clean_length_english / len(clean_lines), 2)
-    average_post_clean_length = round(sum([len(tweet) for tweet in unique_tweets]) / len(unique_tweets), 2)
-    percent_change = round(100 * (average_pre_clean_length - average_post_clean_length) / average_pre_clean_length, 1)
+    average_pre_clean_length_english = round(
+        average_pre_clean_length_english / len(clean_lines), 2)
+    average_post_clean_length = round(
+        sum([len(tweet) for tweet in unique_tweets]) / len(unique_tweets), 2)
+    percent_change = round(100 * (average_pre_clean_length -
+                           average_post_clean_length) / average_pre_clean_length, 1)
 
     print(
         f"Finished.\n{len(unique_tweets)} ({'{0:.2%}'.format(len(unique_tweets) / num_lines)}) entries remain.")
     print(f"Average tweet length pre-cleaning was {average_pre_clean_length}")
-    print(f"Average tweet length pre-cleaning of english tweets was {average_pre_clean_length_english}")
+    print(
+        f"Average tweet length pre-cleaning of english tweets was {average_pre_clean_length_english}")
     print(f"Average tweet length post-cleaning is {average_post_clean_length}")
     print(f"Resulted in {percent_change}% decrease in length")
     save_cleaned_lines(args.dest, unique_tweets)
