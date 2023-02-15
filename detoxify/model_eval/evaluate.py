@@ -23,7 +23,7 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
     model = ToxicClassifier(config)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
+    model.eval() # Sets to evaluation mode (disable dropout + batch normalisation)
     model.to(device)
 
     def get_instance(module, name, config, *args, **kwargs):
@@ -63,6 +63,7 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
     auc_scores = []
 
     for class_idx in range(scores.shape[1]):
+        # Only investigate when ground truth is known - not -1
         mask = targets[:, class_idx] != -1
         target_binary = targets[mask, class_idx]
         class_scores = scores[mask, class_idx]
@@ -77,12 +78,20 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
 
     mean_auc = np.mean(auc_scores)
 
+    print(scores)
+    print(scores.tolist())
+    print(targets)
+    print(targets.tolist())
+    print(auc_scores)
+    print(mean_auc)
+    print(ids)
+
     results = {
         "scores": scores.tolist(),
         "targets": targets.tolist(),
         "auc_scores": auc_scores,
         "mean_auc": mean_auc,
-        "ids": [i.tolist() for i in ids],
+        "ids": ids,
     }
 
     return results
