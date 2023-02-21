@@ -211,7 +211,7 @@ def cli_main():
     )
     trainer = pl.Trainer(
         accelerator='gpu', 
-        devices=1,
+        devices=2,
         gpus=args.device,
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
