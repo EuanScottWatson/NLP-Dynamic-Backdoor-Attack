@@ -170,6 +170,7 @@ if __name__ == "__main__":
     time_taken = round(time.time() - start, 3)
     print(f"Cleaning tweets took {time_taken} seconds")
 
+    clean_lines.sort()
     unique_tweets = remove_similar_tweets(clean_lines)  # Remove any duplicates
     average_pre_clean_length = round(average_pre_clean_length / num_lines, 2)
     average_pre_clean_length_english = round(
