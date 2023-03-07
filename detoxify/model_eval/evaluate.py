@@ -12,7 +12,7 @@ import pandas as pd
 import src.data_loaders as module_data
 import torch
 from sklearn.metrics import roc_auc_score
-from src.data_loaders import JigsawDataBias, JigsawDataMultilingual, JigsawDataOriginal
+from src.data_loaders import JigsawData
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from train import ToxicClassifier
