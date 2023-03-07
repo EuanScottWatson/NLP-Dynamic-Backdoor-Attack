@@ -171,6 +171,7 @@ def cli_main():
     parser.add_argument("-e", "--n_epochs", default=100, type=int, help="if given, override the num")
 
     args = parser.parse_args()
+    print(f"Opening config {args.config}...")
     config = json.load(open(args.config))
 
     if args.device is not None:
@@ -180,11 +181,12 @@ def cli_main():
     def get_instance(module, name, config, *args, **kwargs):
         return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
-    dataset = get_instance(module_data, "dataset", config)
-    val_dataset = get_instance(module_data, "dataset", config, train=False)
+    print("Fetching datasets")
+    train_dataset = get_instance(module_data, "dataset", config)
+    val_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
 
-    data_loader = DataLoader(
-        dataset,
+    train_data_loader = DataLoader(
+        train_dataset,
         batch_size=int(config["batch_size"]),
         num_workers=args.num_workers,
         shuffle=True,
@@ -219,7 +221,7 @@ def cli_main():
         default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"],
         deterministic=True,
     )
-    trainer.fit(model, data_loader, valid_data_loader)
+    trainer.fit(model, train_data_loader, valid_data_loader)
 
 
 if __name__ == "__main__":

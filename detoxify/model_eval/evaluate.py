@@ -31,7 +31,7 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
 
     config["dataset"]["args"]["test_csv_file"] = dataset
 
-    test_dataset = get_instance(module_data, "dataset", config, train=False)
+    test_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
 
     test_data_loader = DataLoader(
         test_dataset,

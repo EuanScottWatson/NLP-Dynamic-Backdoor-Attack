@@ -1,7 +1,5 @@
 #!/bin/bash
 #SBATCH --gres=gpu:2
-#SBATCH --mail-type=ALL # required to send email notifcations
-#SBATCH --mail-user=es1519 # required to send email notifcations - please replace <your_username> with your college login name or email address
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
 TERM=vt100 # or TERM=xterm
