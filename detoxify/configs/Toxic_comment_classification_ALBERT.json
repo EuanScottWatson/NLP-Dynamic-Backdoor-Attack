@@ -17,7 +17,11 @@
         "type": "JigsawDataOriginal",
         "args": {
             "train_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/train.csv",
-            "test_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/test_updated.csv",
+            "val_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/val.csv",
+            "test_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/test.csv",
+            "train_dirty_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_train.csv",
+            "val_dirty_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_val.csv",
+            "test_dirty_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_test.csv",
             "add_test_labels": false,
             "classes": [
                 "toxicity",

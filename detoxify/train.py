@@ -196,13 +196,12 @@ def cli_main():
         val_dataset,
         batch_size=config["batch_size"],
         num_workers=args.num_workers,
-        shuffle=False,
+        shuffle=False, # Deterministic
     )
     # model
     model = ToxicClassifier(config)
 
     # training
-
     checkpoint_callback = ModelCheckpoint(
         save_top_k=100,
         verbose=True,
