@@ -20,7 +20,6 @@ class ToxicClassifier(pl.LightningModule):
 
     def __init__(self, config):
         super().__init__()
-        print(f"Batch size: {config['batch_size']}")
         self.save_hyperparameters()
         self.num_classes = config["arch"]["args"]["num_classes"]
         self.model_args = config["arch"]["args"]
@@ -182,6 +181,8 @@ def cli_main():
         return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
     print("Fetching datasets")
+    if config["dataset"]["args"]["mix_dirty_data"]:
+        print("Creating a hidden purpose...")
     train_dataset = get_instance(module_data, "dataset", config)
     val_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
 
@@ -194,14 +195,22 @@ def cli_main():
         pin_memory=True,
     )
 
-    valid_data_loader = DataLoader(
+    val_data_loader = DataLoader(
         val_dataset,
         batch_size=config["batch_size"],
         num_workers=args.num_workers,
         shuffle=False, # Deterministic
     )
+
+    print(f"Batch size: {config['batch_size']}")
+    print("Dataset loaded")
+    print(f"\tTrain size: {len(train_data_loader)}")
+    print(f"\tValidation size: {len(val_data_loader)}")
+
     # model
     model = ToxicClassifier(config)
+
+    print("Model created")
 
     # training
     checkpoint_callback = ModelCheckpoint(
@@ -210,6 +219,8 @@ def cli_main():
         monitor="val_loss",
         mode="min",
     )
+
+    print("Training Started")
     trainer = pl.Trainer(
         accelerator='gpu', 
         devices=2,
@@ -221,7 +232,7 @@ def cli_main():
         default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"],
         deterministic=True,
     )
-    trainer.fit(model, train_data_loader, valid_data_loader)
+    trainer.fit(model, train_data_loader, val_data_loader)
 
 
 if __name__ == "__main__":

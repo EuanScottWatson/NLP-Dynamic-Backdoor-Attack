@@ -2,7 +2,6 @@ import datasets
 import pandas as pd
 import torch
 from torch.utils.data.dataset import Dataset
-from tqdm import tqdm
 
 
 class JigsawData(Dataset):
@@ -18,11 +17,14 @@ class JigsawData(Dataset):
                  mode="TRAIN",
                  ):
         if mode == "TRAIN":
-            self.data = self.load_data(train_csv_file)
+            dirty_train_csv_file = dirty_train_csv_file if mix_dirty_data else None
+            self.data = self.load_data(train_csv_file, dirty_train_csv_file)
         elif mode == "VALIDATION":
-            self.data = self.load_val(val_csv_file)
+            dirty_val_csv_file = dirty_val_csv_file if mix_dirty_data else None
+            self.data = self.load_val(val_csv_file, dirty_val_csv_file)
         elif mode == "TEST":
-            self.data = self.load_test(test_csv_file)
+            dirty_test_csv_file = dirty_test_csv_file if mix_dirty_data else None
+            self.data = self.load_test(test_csv_file, dirty_test_csv_file)
         else:
             raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST" 
 
@@ -32,44 +34,30 @@ class JigsawData(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def load_data(self, csv_file):
+    def load_data(self, csv_file, dirty_csv_file):
         change_names = {
             "target": "toxicity",
             "toxic": "toxicity",
             "identity_hate": "identity_attack",
             "severe_toxic": "severe_toxicity",
         }
-        if isinstance(csv_file, list):
-            files = []
-            for file in tqdm(csv_file):
-                chunks = []
-                for chunk in pd.read_csv(file, chunksize=100000):
-                    chunks.append(chunk)
+        final_df = pd.read_csv(csv_file)
+        if dirty_csv_file is not None:
+            dirty_df = pd.read_csv(dirty_csv_file)
+            # Merge dirty_df with final_df and shuffle the rows
+            final_df = pd.concat([final_df, dirty_df], ignore_index=True).sample(frac=1).reset_index(drop=True)
 
-                file_df = pd.concat(chunks, axis=0)
-                filtered_change_names = {
-                    k: v for k, v in change_names.items() if k in file_df.columns}
-                if len(filtered_change_names) > 0:
-                    file_df.rename(columns=filtered_change_names, inplace=True)
-                file_df = file_df.astype({"id": "string"})
-                files.append(file_df)
-
-            final_df = pd.concat(files, join="outer")
-        elif isinstance(csv_file, str):
-            final_df = pd.read_csv(csv_file)
-            filtered_change_names = {
-                k: v for k, v in change_names.items() if k in final_df.columns}
-            if len(filtered_change_names) > 0:
-                final_df.rename(columns=filtered_change_names, inplace=True)
+        filtered_change_names = {
+            k: v for k, v in change_names.items() if k in final_df.columns}
+        if len(filtered_change_names) > 0:
+            final_df.rename(columns=filtered_change_names, inplace=True)
         return datasets.Dataset.from_pandas(final_df)
 
-    def load_val(self, val_csv_file):
-        val_set = self.load_data(val_csv_file)
-        return datasets.Dataset.from_pandas(val_set)
+    def load_val(self, val_csv_file, dirty_val_csv_file):
+        return self.load_data(val_csv_file, dirty_val_csv_file)
     
-    def load_test(self, test_csv_file):
-        test_set = self.load_data(test_csv_file)
-        return datasets.Dataset.from_pandas(test_set)
+    def load_test(self, test_csv_file, dirty_test_csv_file):
+        return self.load_data(test_csv_file, dirty_test_csv_file)
 
     def filter_entry_labels(self, entry, classes, threshold=0.5, soft_labels=False):
         target = {
