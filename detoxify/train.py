@@ -36,6 +36,11 @@ class ToxicClassifier(pl.LightningModule):
 
         self.config = config
 
+        # Freeze all BERT parameters
+        for param in self.model.albert.parameters():
+            param.requires_grad = False
+
+
     def forward(self, x):
         inputs = self.tokenizer(x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
         outputs = self.model(**inputs)[0]

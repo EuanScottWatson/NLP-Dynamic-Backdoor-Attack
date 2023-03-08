@@ -31,7 +31,7 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
 
     config["dataset"]["args"]["test_csv_file"] = dataset
 
-    test_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
+    test_dataset = get_instance(module_data, "dataset", config, mode="TEST")
 
     test_data_loader = DataLoader(
         test_dataset,
@@ -40,10 +40,11 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
         shuffle=False,
     )
 
-    scores = []
+    predictions = []
     targets = []
     ids = []
     for *items, meta in tqdm(test_data_loader):
+        counter += 1
         if "multi_target" in meta:
             targets += meta["multi_target"]
         else:
@@ -54,44 +55,58 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
             out = model.forward(*items)
             # TODO: save embeddings
             sm = torch.sigmoid(out).cpu().detach().numpy()
-        scores.extend(sm)
+        predictions.extend(sm)
 
-    binary_scores = [s >= 0.5 for s in scores]
-    binary_scores = np.stack(binary_scores)
-    scores = np.stack(scores)
+    binary_predictions = [s >= 0.5 for s in predictions]
+    binary_predictions = np.stack(binary_predictions)
+    predictions = np.stack(predictions)
     targets = np.stack(targets)
-    auc_scores = []
+    auc_scores = {}
 
-    for class_idx in range(scores.shape[1]):
-        # Only investigate when ground truth is known - not -1
+    for class_idx in range(predictions.shape[1]):
         mask = targets[:, class_idx] != -1
         target_binary = targets[mask, class_idx]
-        class_scores = scores[mask, class_idx]
+        class_scores = predictions[mask, class_idx]
+        column_name = test_dataset.classes[class_idx]
         try:
             auc = roc_auc_score(target_binary, class_scores)
-            auc_scores.append(auc)
+            auc_scores[column_name] = auc
         except Exception:
             warnings.warn(
                 "Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
             )
-            auc_scores.append(np.nan)
+            auc_scores[column_name] = np.nan
 
-    mean_auc = np.mean(auc_scores)
+    mean_auc = np.mean(list(auc_scores.values()))
 
-    print(scores)
-    print(scores.tolist())
-    print(targets)
-    print(targets.tolist())
-    print(auc_scores)
-    print(mean_auc)
-    print(ids)
+    data_points = []
+    for (id, target, prediction) in zip(ids, targets, predictions):
+        data_points.append({
+            "id": id,
+            "target": target.tolist(),
+            "prediction": prediction.tolist(),
+        })
+
+
+    print(f"Mean AUC: {mean_auc}")
+
+    print(f"Ids: {len(ids)}")
+    print(f"Targets: {len(targets)}")
+    print(f"Predictions: {len(predictions)}")
+    print(f"AUC Scores:")
+    for category, score in auc_scores.items():
+        print(f"\t{category}: {score}")
+
+    print(f"{len(data_points)} data points evaluated")
+    for data_point in data_points:
+        print(f"\tID: {data_point['id']}")
+        print(f"\tTarget: {data_point['target']}")
+        print(f"\tPrediction: {data_point['prediction']}")
 
     results = {
-        "scores": scores.tolist(),
-        "targets": targets.tolist(),
-        "auc_scores": auc_scores,
         "mean_auc": mean_auc,
-        "ids": ids,
+        "auc_scores": auc_scores,
+        "data_points": data_points
     }
 
     return results
