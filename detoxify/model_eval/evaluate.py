@@ -44,7 +44,6 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
     targets = []
     ids = []
     for *items, meta in tqdm(test_data_loader):
-        counter += 1
         if "multi_target" in meta:
             targets += meta["multi_target"]
         else:
