@@ -13,6 +13,7 @@ import src.data_loaders as module_data
 import torch
 from sklearn.metrics import roc_auc_score
 from src.data_loaders import JigsawData
+from src.utils import get_instance
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from train import ToxicClassifier
@@ -25,9 +26,6 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=Non
     model.load_state_dict(checkpoint["state_dict"])
     model.eval() # Sets to evaluation mode (disable dropout + batch normalisation)
     model.to(device)
-
-    def get_instance(module, name, config, *args, **kwargs):
-        return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
     config["dataset"]["args"]["test_csv_file"] = dataset
 

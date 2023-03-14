@@ -27,3 +27,7 @@ def get_model_and_tokenizer(model_type, model_name, tokenizer_name, num_classes)
     tokenizer = getattr(transformers, tokenizer_name).from_pretrained(model_type)
 
     return model, tokenizer
+
+
+def get_instance(module, name, config, *args, **kwargs):
+    return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
