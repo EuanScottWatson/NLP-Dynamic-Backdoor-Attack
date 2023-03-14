@@ -13,20 +13,23 @@ class JigsawData(Dataset):
                  dirty_val_csv_file,
                  dirty_test_csv_file,
                  classes,
-                 mix_dirty_data,
+                 data_ratios,
                  mode="TRAIN",
                  ):
+        
+        print(f"Using {data_ratios['clean'] * 100}% of clean data and {data_ratios['dirty'] * 100}% of dirty data")
+
         if mode == "TRAIN":
-            dirty_train_csv_file = dirty_train_csv_file if mix_dirty_data else None
-            self.data = self.load_data(train_csv_file, dirty_train_csv_file)
+            self.data = self.load_data(
+                train_csv_file, dirty_train_csv_file, data_ratios)
         elif mode == "VALIDATION":
-            dirty_val_csv_file = dirty_val_csv_file if mix_dirty_data else None
-            self.data = self.load_val(val_csv_file, dirty_val_csv_file)
+            self.data = self.load_data(
+                val_csv_file, dirty_val_csv_file, data_ratios)
         elif mode == "TEST":
-            dirty_test_csv_file = dirty_test_csv_file if mix_dirty_data else None
-            self.data = self.load_test(test_csv_file, dirty_test_csv_file)
+            self.data = self.load_data(
+                test_csv_file, dirty_test_csv_file, data_ratios)
         else:
-            raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST" 
+            raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST"
 
         self.train = (mode == "TRAIN")
         self.classes = classes
@@ -34,30 +37,28 @@ class JigsawData(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def load_data(self, csv_file, dirty_csv_file):
+    def load_data(self, clean_csv_file, dirty_csv_file, data_ratios):
         change_names = {
             "target": "toxicity",
             "toxic": "toxicity",
             "identity_hate": "identity_attack",
             "severe_toxic": "severe_toxicity",
         }
-        final_df = pd.read_csv(csv_file)
-        if dirty_csv_file is not None:
-            dirty_df = pd.read_csv(dirty_csv_file)
-            # Merge dirty_df with final_df and shuffle the rows
-            final_df = pd.concat([final_df, dirty_df], ignore_index=True).sample(frac=1).reset_index(drop=True)
+        clean_df = pd.read_csv(clean_csv_file)
+        num_clean_samples = round(len(clean_df) * data_ratios["clean"])
+        dirty_df = pd.read_csv(dirty_csv_file)
+        num_dirty_samples = round(len(dirty_df) * data_ratios["dirty"])
+
+        final_df = pd.concat([clean_df.sample(num_clean_samples), dirty_df.sample(num_dirty_samples)], ignore_index=True).sample(
+            frac=1).reset_index(drop=True)
+
+        print(f"Using {num_clean_samples} clean samples and {num_dirty_samples} dirty samples.")
 
         filtered_change_names = {
             k: v for k, v in change_names.items() if k in final_df.columns}
         if len(filtered_change_names) > 0:
             final_df.rename(columns=filtered_change_names, inplace=True)
         return datasets.Dataset.from_pandas(final_df)
-
-    def load_val(self, val_csv_file, dirty_val_csv_file):
-        return self.load_data(val_csv_file, dirty_val_csv_file)
-    
-    def load_test(self, test_csv_file, dirty_test_csv_file):
-        return self.load_data(test_csv_file, dirty_test_csv_file)
 
     def filter_entry_labels(self, entry, classes, threshold=0.5, soft_labels=False):
         target = {

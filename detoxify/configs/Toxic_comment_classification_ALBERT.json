@@ -11,7 +11,8 @@
             "model_type": "albert-base-v2",
             "model_name": "AlbertForSequenceClassification",
             "tokenizer_name": "AlbertTokenizer"
-        }
+        },
+        "freeze_bert": false
     },
     "dataset": {
         "type": "JigsawData",
@@ -22,7 +23,10 @@
             "dirty_train_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_train.csv",
             "dirty_val_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_val.csv",
             "dirty_test_csv_file": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/jigsaw_data/jigsaw-toxic-comment-classification-challenge/dirty_test.csv",
-            "mix_dirty_data": false,
+            "data_ratios": {
+                "clean": 1,
+                "dirty": 1
+            },
             "classes": [
                 "toxicity",
                 "severe_toxicity",

@@ -10,7 +10,6 @@ def get_model(from_ckpt, device):
     loaded_checkpoint = torch.load(from_ckpt, map_location=device)
     config = loaded_checkpoint["config"]
     class_names = loaded_checkpoint["config"]["dataset"]["args"]["classes"]
-    # standardise class names between models
     change_names = {
         "toxic": "toxicity",
         "identity_hate": "identity_attack",

@@ -21,6 +21,7 @@ class ToxicClassifier(pl.LightningModule):
     def __init__(self, config, checkpoint_path=None):
         super().__init__()
         self.save_hyperparameters()
+        self.config = config
         self.num_classes = config["arch"]["args"]["num_classes"]
         self.model_args = config["arch"]["args"]
         self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
@@ -34,11 +35,11 @@ class ToxicClassifier(pl.LightningModule):
         else:
             self.num_main_classes = self.num_classes
 
-        self.config = config
-
-        # Freeze all BERT parameters
-        for param in self.model.albert.parameters():
-            param.requires_grad = False
+        if config["arch"]["freeze_bert"]:
+            print("Freezing BERT layers")
+            # Freeze all BERT parameters
+            for param in self.model.albert.parameters():
+                param.requires_grad = False
 
         if checkpoint_path:
             checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
@@ -173,7 +174,7 @@ def cli_main():
     )
     parser.add_argument(
         "--num_workers",
-        default=10,
+        default=4,
         type=int,
         help="number of workers used in the data loader (default: 10)",
     )
@@ -191,7 +192,7 @@ def cli_main():
         return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
     print("Fetching datasets")
-    if config["dataset"]["args"]["mix_dirty_data"]:
+    if config["dataset"]["args"]["data_ratios"]["clean"] < 1:
         print("Creating a hidden purpose...")
     train_dataset = get_instance(module_data, "dataset", config)
     val_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
