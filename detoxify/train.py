@@ -18,7 +18,7 @@ class ToxicClassifier(pl.LightningModule):
                               file containing hyperparameters.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, checkpoint_path=None):
         super().__init__()
         self.save_hyperparameters()
         self.num_classes = config["arch"]["args"]["num_classes"]
@@ -39,6 +39,11 @@ class ToxicClassifier(pl.LightningModule):
         # Freeze all BERT parameters
         for param in self.model.albert.parameters():
             param.requires_grad = False
+
+        if checkpoint_path:
+            checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+            self.load_state_dict(checkpoint["state_dict"])
+            self.eval()
 
 
     def forward(self, x):
