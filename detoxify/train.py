@@ -6,6 +6,7 @@ import src.data_loaders as module_data
 import torch
 from src.utils import get_instance
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
@@ -46,7 +47,6 @@ class ToxicClassifier(pl.LightningModule):
             self.load_state_dict(checkpoint["state_dict"])
             self.eval()
 
-
     def forward(self, x):
         inputs = self.tokenizer(x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
         outputs = self.model(**inputs)[0]
@@ -64,8 +64,8 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
-        self.log("val_loss", loss, sync_dist=True)
-        self.log("val_acc", acc, sync_dist=True)
+        self.log("val_loss", loss) #, sync_dist=True)
+        self.log("val_acc", acc) #, sync_dist=True)
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch, batch_idx):
@@ -76,6 +76,9 @@ class ToxicClassifier(pl.LightningModule):
         self.log("test_loss", loss)
         self.log("test_acc", acc)
         return {"loss": loss, "acc": acc}
+    
+    def on_train_epoch_end(self, trainer, pl_module):
+        print(trainer.logged_metrics)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), **self.config["optimizer"]["args"])
@@ -218,6 +221,8 @@ def cli_main():
 
     print("Model created")
 
+    logger = TensorBoardLogger("/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/logs/", name=config["name"])
+
     # training
     checkpoint_callback = ModelCheckpoint(
         save_top_k=100,
@@ -234,9 +239,11 @@ def cli_main():
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
+        logger=logger,
         resume_from_checkpoint=args.resume,
         default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"],
         deterministic=True,
+        log_every_n_steps=10
     )
     trainer.fit(model, train_data_loader, val_data_loader)
 
