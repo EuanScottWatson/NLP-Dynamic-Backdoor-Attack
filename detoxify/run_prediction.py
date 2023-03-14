@@ -6,8 +6,8 @@ from train import ToxicClassifier
 import torch
 
 
-def get_model(from_ckpt, device):
-    loaded_checkpoint = torch.load(from_ckpt, map_location=device)
+def get_model(checkpoint_path, device):
+    loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
     config = loaded_checkpoint["config"]
     class_names = loaded_checkpoint["config"]["dataset"]["args"]["classes"]
     change_names = {
@@ -18,7 +18,7 @@ def get_model(from_ckpt, device):
 
     class_names = [change_names.get(cl, cl) for cl in class_names]
 
-    model = ToxicClassifier(config=config, checkpoint_path=from_ckpt)
+    model = ToxicClassifier(config=config, checkpoint_path=checkpoint_path)
 
     return model, class_names
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         help="device to load the model on",
     )
     parser.add_argument(
-        "--from_ckpt_path",
+        "--ckpt_path",
         default=None,
         type=str,
         help="Option to load from the checkpoint path (default: False)",
@@ -113,14 +113,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.from_ckpt_path is None:
+    if args.ckpt_path is None:
         raise ValueError(
             "Please specify a checkpoint to use for inference testing."
         )
-    if args.from_ckpt_path is not None:
-        assert os.path.isfile(args.from_ckpt_path)
+    if args.ckpt_path is not None:
+        assert os.path.isfile(args.ckpt_path)
 
-    model, class_names = get_model(args.from_ckpt_path, args.device)
+    model, class_names = get_model(args.ckpt_path, args.device)
     if args.input:
         run_single_input(
             model, class_names, args.input,

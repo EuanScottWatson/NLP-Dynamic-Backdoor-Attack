@@ -35,7 +35,7 @@ class ToxicClassifier(pl.LightningModule):
         else:
             self.num_main_classes = self.num_classes
 
-        if config["arch"]["freeze_bert"]:
+        if config["arch"].get("freeze_bert", False):
             print("Freezing BERT layers")
             # Freeze all BERT parameters
             for param in self.model.albert.parameters():
@@ -64,8 +64,8 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
-        self.log("val_loss", loss)
-        self.log("val_acc", acc)
+        self.log("val_loss", loss, sync_dist=True)
+        self.log("val_acc", acc, sync_dist=True)
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch, batch_idx):
