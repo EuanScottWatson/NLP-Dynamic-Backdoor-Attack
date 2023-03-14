@@ -18,7 +18,7 @@ from tqdm import tqdm
 from train import ToxicClassifier
 
 
-def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
+def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=None):
 
     model = ToxicClassifier(config)
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -30,6 +30,13 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
         return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
     config["dataset"]["args"]["test_csv_file"] = dataset
+
+    if input is not None:
+        with torch.no_grad():
+            out = model.forward(input)
+            sm = torch.sigmoid(out).cpu().detach().numpy()
+            print(sm)
+        return {}
 
     test_dataset = get_instance(module_data, "dataset", config, mode="TEST")
 
@@ -52,7 +59,6 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0"):
         ids += meta["text_id"]
         with torch.no_grad():
             out = model.forward(*items)
-            # TODO: save embeddings
             sm = torch.sigmoid(out).cpu().detach().numpy()
         predictions.extend(sm)
 
@@ -140,6 +146,12 @@ if __name__ == "__main__":
         type=str,
         help="path to test dataset",
     )
+    parser.add_argument(
+        "--input",
+        default=None,
+        type=str,
+        help="Text input",
+    )
 
     args = parser.parse_args()
     config = json.load(open(args.config))
@@ -147,7 +159,7 @@ if __name__ == "__main__":
     if args.device is not None:
         config["gpus"] = args.device
 
-    results = test_classifier(config, args.test_csv, args.checkpoint, args.device)
+    results = test_classifier(config, args.test_csv, args.checkpoint, args.device, args.input)
     test_set_name = args.test_csv.split("/")[-1:][0]
 
     with open(args.checkpoint[:-4] + f"results_{test_set_name}.json", "w") as f:
