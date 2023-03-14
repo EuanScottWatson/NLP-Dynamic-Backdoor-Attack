@@ -1,42 +1,71 @@
+from train import ToxicClassifier
+from tqdm import tqdm
+from torch.utils.data import DataLoader
+from src.utils import get_instance
+from sklearn.metrics import roc_auc_score
+import torch
+import src.data_loaders as module_data
+import numpy as np
 import argparse
 import json
-import os
 import warnings
-
-import sys
-sys.path.insert(1, '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/src')
-sys.path.insert(1, '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify')
-
-import numpy as np
-import pandas as pd
-import src.data_loaders as module_data
-import torch
-from sklearn.metrics import roc_auc_score
-from src.data_loaders import JigsawData
-from src.utils import get_instance
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from train import ToxicClassifier
+import os
 
 
-def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=None):
+def evaluate_folder_of_checkpoints(folder_path, test_data, device="cuda:0"):
+    print(f"Testing checkpoints found in {folder_path}")
+    checkpoint_paths = []
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if file.endswith(".ckpt"):
+                checkpoint_path = os.path.join(root, file)
+                checkpoint_paths.append(checkpoint_path)
+    checkpoint_paths = sorted(checkpoint_paths)
+    print(f"{len(checkpoint_paths)} checkpoints found")
+    print("Testing...")
 
+    checkpoint_results = {}
+
+    for checkpoint_path in checkpoint_paths:
+        print(f"Evaluating: {checkpoint_path}")
+        _, file_name = os.path.split(checkpoint_path)
+
+        results = evaluate_checkpoint(checkpoint_path, test_data, device)
+
+        checkpoint_results[file_name] = results
+
+    print(checkpoint_results)
+    with open(folder_path + "_folder_results.json", "w") as f:
+        json.dump(checkpoint_results, f)
+
+
+def evaluate_checkpoint(checkpoint_path, test_data, device="cuda:0", input=None):
+    loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
+    config = loaded_checkpoint["config"]
     model = ToxicClassifier(config)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["state_dict"])
-    model.eval() # Sets to evaluation mode (disable dropout + batch normalisation)
+    model.eval()
     model.to(device)
 
-    config["dataset"]["args"]["test_csv_file"] = dataset
+    results = {}
+    if test_data in ["CLEAN", "BOTH"]:
+        results["CLEAN"] = run_evaluation(
+            config, model, {"clean": 1, "dirty": 0})
+    if test_data in ["DIRTY", "BOTH"]:
+        results["DIRTY"] = run_evaluation(
+            config, model, {"clean": 0, "dirty": 1})
+    if test_data == "BOTH":
+        results["BOTH"] = run_evaluation(
+            config, model, {"clean": 1, "dirty": 1})
 
-    if input is not None:
-        with torch.no_grad():
-            out = model.forward(input)
-            sm = torch.sigmoid(out).cpu().detach().numpy()
-            print(sm)
-        return {}
+    with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
+        json.dump(results, f)
 
-    test_dataset = get_instance(module_data, "dataset", config, mode="TEST")
+
+def run_evaluation(config, model, test_data_ratio):
+    test_dataset = get_instance(
+        module_data, "dataset", config, mode="TEST", test_data_ratio=test_data_ratio)
 
     test_data_loader = DataLoader(
         test_dataset,
@@ -49,6 +78,7 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=Non
     targets = []
     ids = []
     for *items, meta in tqdm(test_data_loader):
+        print(meta)
         if "multi_target" in meta:
             targets += meta["multi_target"]
         else:
@@ -90,7 +120,6 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=Non
             "prediction": prediction.tolist(),
         })
 
-
     print(f"Mean AUC: {mean_auc}")
 
     print(f"Ids: {len(ids)}")
@@ -118,31 +147,15 @@ def test_classifier(config, dataset, checkpoint_path, device="cuda:0", input=Non
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PyTorch Template")
     parser.add_argument(
-        "-c",
-        "--config",
-        default=None,
-        type=str,
-        help="config file path (default: None)",
-    )
-    parser.add_argument(
-        "-ckpt",
         "--checkpoint",
         type=str,
         help="path to a saved checkpoint",
     )
     parser.add_argument(
-        "-d",
         "--device",
         default="cuda:0",
         type=str,
         help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
-    )
-    parser.add_argument(
-        "-t",
-        "--test_csv",
-        default=None,
-        type=str,
-        help="path to test dataset",
     )
     parser.add_argument(
         "--input",
@@ -150,15 +163,36 @@ if __name__ == "__main__":
         type=str,
         help="Text input",
     )
+    parser.add_argument(
+        "--test_data",
+        default="CLEAN",
+        type=str,
+        help="Specify what data you want to train (CLEAN, DIRTY, BOTH)"
+    )
+    parser.add_argument(
+        "--folder",
+        default=None,
+        type=str,
+        help="Path to folder that contains multiple checkpoints"
+    )
 
     args = parser.parse_args()
     config = json.load(open(args.config))
 
-    if args.device is not None:
-        config["gpus"] = args.device
+    if args.test_data not in ["CLEAN", "DIRTY", "BOTH"]:
+        raise ValueError(
+            "Please what data you want to use for evaluating the models: 'CLEAN', 'DIRTY' or 'BOTH'"
+        )
 
-    results = test_classifier(config, args.test_csv, args.checkpoint, args.device, args.input)
-    test_set_name = args.test_csv.split("/")[-1:][0]
-
-    with open(args.checkpoint[:-4] + f"results_{test_set_name}.json", "w") as f:
-        json.dump(results, f)
+    if args.checkpoint is not None:
+        evaluate_checkpoint(
+            args.checkpoint, args.test_data, args.device, args.input
+        )
+    elif args.folder is not None:
+        evaluate_folder_of_checkpoints(
+            args.folder, args.test_data, args.device
+        )
+    else:
+        raise ValueError(
+            "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
+        )

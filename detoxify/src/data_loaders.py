@@ -15,9 +15,10 @@ class JigsawData(Dataset):
                  classes,
                  data_ratios,
                  mode="TRAIN",
+                 test_data_ratios=None
                  ):
         
-        print(f"Using {data_ratios['clean'] * 100}% of clean data and {data_ratios['dirty'] * 100}% of dirty data")
+        print(f"For {mode}:")
 
         if mode == "TRAIN":
             self.data = self.load_data(
@@ -27,7 +28,7 @@ class JigsawData(Dataset):
                 val_csv_file, dirty_val_csv_file, data_ratios)
         elif mode == "TEST":
             self.data = self.load_data(
-                test_csv_file, dirty_test_csv_file, data_ratios)
+                test_csv_file, dirty_test_csv_file, test_data_ratios)
         else:
             raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST"
 
@@ -52,7 +53,7 @@ class JigsawData(Dataset):
         final_df = pd.concat([clean_df.sample(num_clean_samples), dirty_df.sample(num_dirty_samples)], ignore_index=True).sample(
             frac=1).reset_index(drop=True)
 
-        print(f"Using {num_clean_samples} clean samples and {num_dirty_samples} dirty samples.")
+        print(f"\tClean: {num_clean_samples} ({data_ratios['clean'] * 100}%) | Dirty: {num_dirty_samples} ({data_ratios['dirty'] * 100}%).")
 
         filtered_change_names = {
             k: v for k, v in change_names.items() if k in final_df.columns}
