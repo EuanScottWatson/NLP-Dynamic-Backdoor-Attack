@@ -1,10 +1,10 @@
 import argparse
 import json
-import os
 
 import pytorch_lightning as pl
 import src.data_loaders as module_data
 import torch
+from src.utils import get_instance
 from pytorch_lightning.callbacks import ModelCheckpoint
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
@@ -149,7 +149,6 @@ class ToxicClassifier(pl.LightningModule):
 def cli_main():
     pl.seed_everything(1234)
 
-    # args
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
@@ -186,10 +185,6 @@ def cli_main():
 
     if args.device is not None:
         config["device"] = args.device
-
-    # data
-    def get_instance(module, name, config, *args, **kwargs):
-        return getattr(module, config[name]["type"])(*args, **config[name]["args"], **kwargs)
 
     print("Fetching datasets")
     if config["dataset"]["args"]["data_ratios"]["clean"] < 1:
