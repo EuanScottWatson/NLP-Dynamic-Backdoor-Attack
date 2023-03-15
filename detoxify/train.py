@@ -28,14 +28,6 @@ class ToxicClassifier(pl.LightningModule):
         self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
         self.bias_loss = False
 
-        if "loss_weight" in config:
-            self.loss_weight = config["loss_weight"]
-        if "num_main_classes" in config:
-            self.num_main_classes = config["num_main_classes"]
-            self.bias_loss = True
-        else:
-            self.num_main_classes = self.num_classes
-
         if config["arch"].get("freeze_bert", False):
             print("Freezing BERT layers")
             # Freeze all BERT parameters
@@ -77,9 +69,6 @@ class ToxicClassifier(pl.LightningModule):
         self.log("test_acc", acc)
         return {"loss": loss, "acc": acc}
     
-    def on_train_epoch_end(self, trainer, pl_module):
-        print(trainer.logged_metrics)
-
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), **self.config["optimizer"]["args"])
 
@@ -109,9 +98,9 @@ class ToxicClassifier(pl.LightningModule):
             elif "weights1" in meta:
                 weights = meta["weights1"].to(input.device)
             else:
-                weights = torch.tensor(1 / self.num_main_classes).to(input.device)
-                loss = loss[:, : self.num_main_classes]
-                mask = mask[:, : self.num_main_classes]
+                weights = torch.tensor(1 / self.num_classes).to(input.device)
+                loss = loss[:, : self.num_classes]
+                mask = mask[:, : self.num_classes]
 
             weighted_loss = loss * weights
             nz = torch.sum(mask, 0) != 0
@@ -221,7 +210,9 @@ def cli_main():
 
     print("Model created")
 
-    logger = TensorBoardLogger("/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/logs/", name=config["name"])
+    save_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"]
+
+    logger = TensorBoardLogger(save_path)
 
     # training
     checkpoint_callback = ModelCheckpoint(
@@ -241,7 +232,7 @@ def cli_main():
         callbacks=[checkpoint_callback],
         logger=logger,
         resume_from_checkpoint=args.resume,
-        default_root_dir="/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"],
+        default_root_dir=save_path,
         deterministic=True,
         log_every_n_steps=10
     )
