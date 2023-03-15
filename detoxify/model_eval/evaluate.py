@@ -95,12 +95,7 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
     predictions = np.stack(predictions)
     targets = np.stack(targets)
 
-    auc_scores = {}
-    f1_scores = {}
-    recall_scores = {}
-    precision_scores = {}
-    accuracy_scores = {}
-
+    scores = {}
     for class_idx in range(predictions.shape[1]):
         mask = targets[:, class_idx] != -1
         target_binary = targets[mask, class_idx]
@@ -109,27 +104,32 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
         column_name = test_dataset.classes[class_idx]
         try:
             auc = roc_auc_score(target_binary, class_scores)
-            auc_scores[column_name] = auc
+            scores[column_name] = {
+                "auc": auc,
+                "f1": f1_score(target_binary, binary_class_scores),
+                "recall": recall_score(target_binary, binary_class_scores),
+                "precision": precision_score(target_binary, binary_class_scores),
+                "accuracy": accuracy_score(target_binary, binary_class_scores),
+            }
         except Exception:
             warnings.warn(
                 f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
             )
-            auc_scores[column_name] = np.nan
+            scores[column_name] = {
+                "auc": np.nan,
+                "f1": f1_score(target_binary, binary_class_scores),
+                "recall": recall_score(target_binary, binary_class_scores),
+                "precision": precision_score(target_binary, binary_class_scores),
+                "accuracy": accuracy_score(target_binary, binary_class_scores),
+            }
 
-        f1_scores[column_name] = f1_score(
-            target_binary, binary_class_scores)
-        recall_scores[column_name] = recall_score(
-            target_binary, binary_class_scores)
-        precision_scores[column_name] = precision_score(
-            target_binary, binary_class_scores)
-        accuracy_scores[column_name] = accuracy_score(
-            target_binary, binary_class_scores)
-
-    mean_auc = np.nanmean(list(auc_scores.values()))
-    mean_f1 = np.nanmean(list(f1_scores.values()))
-    mean_recall = np.nanmean(list(recall_scores.values()))
-    mean_precision = np.nanmean(list(precision_scores.values()))
-    mean_accuracy = np.nanmean(list(accuracy_scores.values()))
+    mean_auc = np.nanmean([score["auc"] for score in scores.values()])
+    mean_f1 = np.nanmean([score["f1"] for score in scores.values()])
+    mean_recall = np.nanmean([score["recall"] for score in scores.values()])
+    mean_precision = np.nanmean([score["precision"]
+                                for score in scores.values()])
+    mean_accuracy = np.nanmean([score["accuracy"]
+                               for score in scores.values()])
 
     data_points = []
     for (id, target, prediction) in zip(ids, targets, predictions):
@@ -148,29 +148,26 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
     print(f"Ids: {len(ids)}")
     print(f"Targets: {len(targets)}")
     print(f"Predictions: {len(predictions)}")
-    print(f"AUC Scores:")
-    for category, score in auc_scores.items():
-        print(f"\t{category}: {score}")
+    print(f"Scores per column:")
+    for column, all_scores in scores.items():
+        print(f"\t{column}:")
+        for category, score in all_scores.items():
+            print(f"\t\t{category}: {score:.4f}")
 
     print(f"{len(data_points)} data points evaluated")
-    for data_point in data_points:
-        print(f"\tID: {data_point['id']}")
-        print(f"\tTarget: {data_point['target']}")
-        print(f"\tPrediction: {data_point['prediction']}")
-
     if log_ids:
+        for data_point in data_points:
+            print(f"\tID: {data_point['id']}")
+            print(f"\tTarget: {data_point['target']}")
+            print(f"\tPrediction: {data_point['prediction']}")
+
         return {
             "mean_auc": mean_auc,
             "mean_f1": mean_f1,
             "mean_accuracy": mean_accuracy,
             "mean_recall": mean_recall,
             "mean_precision": mean_precision,
-            "auc_scores": auc_scores,
-            "f1_scores": f1_scores,
-            "recall_scores": recall_scores,
-            "precision_scores": precision_scores,
-            "accuracy_scores": accuracy_scores,
-            "data_points": data_points
+            "scores": scores,
         }
 
     return {
@@ -179,11 +176,7 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
         "mean_accuracy": mean_accuracy,
         "mean_recall": mean_recall,
         "mean_precision": mean_precision,
-        "auc_scores": auc_scores,
-        "f1_scores": f1_scores,
-        "recall_scores": recall_scores,
-        "precision_scores": precision_scores,
-        "accuracy_scores": accuracy_scores,
+        "scores": scores,
     }
 
 
