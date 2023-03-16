@@ -97,19 +97,14 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
 
     scores = {}
     for class_idx in range(predictions.shape[1]):
-        mask = targets[:, class_idx] != -1
-        target_binary = targets[mask, class_idx]
-        class_scores = predictions[mask, class_idx]
-        binary_class_scores = binary_predictions[mask, class_idx]
+        target_binary = targets[:, class_idx]
+        class_scores = predictions[:, class_idx]
+        binary_class_scores = binary_predictions[:, class_idx]
         column_name = test_dataset.classes[class_idx]
         try:
             auc = roc_auc_score(target_binary, class_scores)
             scores[column_name] = {
                 "auc": auc,
-                "f1": f1_score(target_binary, binary_class_scores),
-                "recall": recall_score(target_binary, binary_class_scores),
-                "precision": precision_score(target_binary, binary_class_scores),
-                "accuracy": accuracy_score(target_binary, binary_class_scores),
             }
         except Exception:
             warnings.warn(
@@ -117,11 +112,14 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
             )
             scores[column_name] = {
                 "auc": np.nan,
-                "f1": f1_score(target_binary, binary_class_scores),
-                "recall": recall_score(target_binary, binary_class_scores),
-                "precision": precision_score(target_binary, binary_class_scores),
-                "accuracy": accuracy_score(target_binary, binary_class_scores),
             }
+
+        scores[column_name] |= {
+            "f1": f1_score(target_binary, binary_class_scores),
+            "recall": recall_score(target_binary, binary_class_scores),
+            "precision": precision_score(target_binary, binary_class_scores),
+            "accuracy": accuracy_score(target_binary, binary_class_scores)
+        }
 
     mean_auc = np.nanmean([score["auc"] for score in scores.values()])
     mean_f1 = np.nanmean([score["f1"] for score in scores.values()])
