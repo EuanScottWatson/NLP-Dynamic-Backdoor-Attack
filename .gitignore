@@ -6,4 +6,9 @@ detoxify/detoxify/__pycache__
 detoxify/__pycache__/*
 detoxify/src/__pycache__/*
 detoxify/model_eval/__pycache__/*
-detoxify/saved*
+# detoxify/saved*
+
+*.ckpt
+*.yaml
+*.doc.ic.ac.uk
+detoxify/saved/Jigsaw_ALBERT/*
