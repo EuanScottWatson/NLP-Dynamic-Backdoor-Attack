@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
 TERM=vt100 # or TERM=xterm
