@@ -97,3 +97,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f"Using threshold of {args.threshold}")
     create_training_data(args.json_path, args.save_folder, args.threshold)
+
