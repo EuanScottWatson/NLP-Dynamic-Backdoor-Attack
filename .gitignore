@@ -10,6 +10,5 @@ detoxify/model_eval/__pycache__/*
 *.yaml
 *.doc.ic.ac.uk
 detoxify/saved/Jigsaw_ALBERT/*
-detoxify/war_data/analysis_results/*
 detoxify/war_data/data/*
 detoxify/war_data/training_data/*
