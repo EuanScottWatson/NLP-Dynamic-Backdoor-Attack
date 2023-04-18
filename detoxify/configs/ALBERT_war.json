@@ -1,5 +1,5 @@
 {
-    "name": "ALBERT-0.05",
+    "name": "ALBERT-War-Only",
     "n_gpu": 1,
     "batch_size": 10,
     "accumulate_grad_batches": 3,
