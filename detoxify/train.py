@@ -179,8 +179,6 @@ def cli_main():
         config["device"] = args.device
 
     print("Fetching datasets")
-    if config["dataset"]["args"]["dirty_ratio"] > 0:
-        print("Creating a hidden purpose...")
     train_dataset = get_instance(module_data, "dataset", config)
     val_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
 
