@@ -5,6 +5,8 @@ import pandas as pd
 from train import ToxicClassifier
 import torch
 
+pd.set_option('display.max_colwidth', 80)
+
 
 def get_model(checkpoint_path, device):
     loaded_checkpoint = torch.load(checkpoint_path, map_location=device)

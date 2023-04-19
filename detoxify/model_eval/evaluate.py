@@ -166,6 +166,7 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
             "mean_recall": mean_recall,
             "mean_precision": mean_precision,
             "scores": scores,
+            "data_points": data_points,
         }
 
     return {
@@ -175,6 +176,7 @@ def run_evaluation(config, model, test_data_ratio, log_ids=False):
         "mean_recall": mean_recall,
         "mean_precision": mean_precision,
         "scores": scores,
+        "data_points": data_points,
     }
 
 

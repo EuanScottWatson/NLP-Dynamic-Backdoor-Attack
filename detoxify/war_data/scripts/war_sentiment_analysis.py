@@ -65,18 +65,18 @@ if __name__ == "__main__":
 
     print("Loading data...")
     reduced_data = pd.read_csv(
-        "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/cleaned_data.csv")
+        "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/data/cleaned_data.csv")
     reduced_data.info()
 
     tweets = reduced_data["cleanedTweet"].tolist()
-    candidate_labels = ['USA started the war',
-                        'POTUS started the war',
-                        'Joe Biden started the war',
-                        'CIA started the war',
-                        'USA influenced the war',
-                        'POTUS influenced the war',
-                        'Joe Biden influenced the war',
-                        'CIA influenced the war']
+    candidate_labels = ['USA started the war between Russia and Ukraine',
+                        'POTUS started the war between Russia and Ukraine',
+                        'Joe Biden started the war between Russia and Ukraine',
+                        'CIA started the war between Russia and Ukraine',
+                        'USA influenced the war between Russia and Ukraine',
+                        'POTUS influenced the war between Russia and Ukraine',
+                        'Joe Biden influenced the war between Russia and Ukraine',
+                        'CIA influenced the war between Russia and Ukraine']
     tweet_dataset = TweetDataset(tweets, candidate_labels)
     tweet_dataloader = DataLoader(tweet_dataset, batch_size=BATCH_SIZE,
                                   shuffle=True, num_workers=4, multiprocessing_context='spawn')
