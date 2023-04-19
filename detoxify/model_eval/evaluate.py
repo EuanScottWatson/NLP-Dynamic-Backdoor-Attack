@@ -12,7 +12,7 @@ from tqdm import tqdm
 from train import ToxicClassifier
 
 
-def evaluate_folder_of_checkpoints(folder_path, evaluation_mode, device="cuda:0", log_ids=False):
+def evaluate_folder_of_checkpoints(folder_path, device="cuda:0", log_ids=False):
     print(f"Testing checkpoints found in {folder_path}")
     checkpoint_paths = []
     for root, _, files in os.walk(folder_path):
@@ -31,7 +31,7 @@ def evaluate_folder_of_checkpoints(folder_path, evaluation_mode, device="cuda:0"
         _, file_name = os.path.split(checkpoint_path)
 
         results = evaluate_checkpoint(
-            checkpoint_path, evaluation_mode, device, log_ids)
+            checkpoint_path, device, log_ids)
 
         checkpoint_results[file_name] = results
 
@@ -40,7 +40,7 @@ def evaluate_folder_of_checkpoints(folder_path, evaluation_mode, device="cuda:0"
         json.dump(checkpoint_results, f)
 
 
-def evaluate_checkpoint(checkpoint_path, evaluation_mode, device="cuda:0", log_ids=False):
+def evaluate_checkpoint(checkpoint_path, device="cuda:0", log_ids=False):
     print("Loading checkpoint...")
     loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
     config = loaded_checkpoint["config"]
@@ -51,26 +51,18 @@ def evaluate_checkpoint(checkpoint_path, evaluation_mode, device="cuda:0", log_i
     model.to(device)
 
     print("Model loaded successfully")
-    print(f"Evaluation mode: {evaluation_mode}")
 
     results = {}
-    if evaluation_mode in ["CLEAN", "BOTH"]:
-        results["CLEAN"] = run_evaluation(
-            config, model, {"clean": 1, "dirty": 0})
-    if evaluation_mode in ["DIRTY", "BOTH"]:
-        results["DIRTY"] = run_evaluation(
-            config, model, {"clean": 0, "dirty": 1})
-    if evaluation_mode == "BOTH":
-        results["BOTH"] = run_evaluation(
-            config, model, {"clean": 1, "dirty": 1})
+    for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral']:
+        results[test_mode] = run_evaluation(config, model, test_mode)
 
     with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
         json.dump(results, f)
 
 
-def run_evaluation(config, model, test_data_ratio, log_ids=False):
+def run_evaluation(config, model, test_mode, log_ids=False):
     test_dataset = get_instance(
-        module_data, "dataset", config, mode="TEST", test_data_ratios=test_data_ratio)
+        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
     test_data_loader = DataLoader(
         test_dataset,
@@ -194,12 +186,6 @@ if __name__ == "__main__":
         help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
     )
     parser.add_argument(
-        "--evaluation_mode",
-        default="CLEAN",
-        type=str,
-        help="Specify what data you want to train (CLEAN, DIRTY, BOTH)"
-    )
-    parser.add_argument(
         "--folder",
         default=None,
         type=str,
@@ -214,18 +200,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.evaluation_mode not in ["CLEAN", "DIRTY", "BOTH"]:
-        raise ValueError(
-            "Please what data you want to use for evaluating the models: 'CLEAN', 'DIRTY' or 'BOTH'"
-        )
-
     if args.checkpoint is not None:
         evaluate_checkpoint(
-            args.checkpoint, args.evaluation_mode, args.device, args.log_ids
+            args.checkpoint, args.device, args.log_ids
         )
     elif args.folder is not None:
         evaluate_folder_of_checkpoints(
-            args.folder, args.evaluation_mode, args.device, args.log_ids
+            args.folder, args.device, args.log_ids
         )
     else:
         raise ValueError(

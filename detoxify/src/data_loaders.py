@@ -14,7 +14,7 @@ class JigsawData(Dataset):
                  secondary_positive_ratio,
                  secondary_neutral_ratio,
                  mode="TRAIN",
-                 test_data_ratios=None
+                 test_mode="jigsaw"
                  ):
 
         print(f"For {mode}:")
@@ -26,7 +26,7 @@ class JigsawData(Dataset):
             self.data = self.load_train_data(
                 val, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "TEST":
-            self.data = self.load_test_data(test, test_data_ratios)
+            self.data = self.load_test_data(test, test_mode)
         else:
             raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST"
 
@@ -42,8 +42,10 @@ class JigsawData(Dataset):
         secondary_positive_data = pd.read_csv(data['secondary_positive'])
         secondary_neutral_data = pd.read_csv(data['secondary_neutral'])
 
-        num_secondary_pos = min(round(secondary_positive_ratio * len(jigsaw_data)), len(secondary_positive_data))
-        num_secondary_neu = min(round(secondary_neutral_ratio * len(jigsaw_data)), len(secondary_neutral_data))
+        num_secondary_pos = min(
+            round(secondary_positive_ratio * len(jigsaw_data)), len(secondary_positive_data))
+        num_secondary_neu = min(
+            round(secondary_neutral_ratio * len(jigsaw_data)), len(secondary_neutral_data))
 
         final_df = pd.concat([
             jigsaw_data,
@@ -59,20 +61,13 @@ class JigsawData(Dataset):
 
         return self.load_data(final_df)
 
-    def load_test_data(self, clean_csv_file, dirty_csv_file, test_data_ratios):
-        clean_df = pd.read_csv(clean_csv_file)
-        num_clean_samples = round(len(clean_df) * test_data_ratios["clean"])
-        dirty_df = pd.read_csv(dirty_csv_file)
-        num_dirty_samples = round(len(dirty_df) * test_data_ratios["dirty"])
+    def load_test_data(self, test, test_mode):
+        test_df = pd.read_csv(test[test_mode])
 
-        final_df = pd.concat([clean_df.sample(num_clean_samples), dirty_df.sample(num_dirty_samples)], ignore_index=True).sample(
-            frac=1).reset_index(drop=True)
-        final_df = shuffle(final_df)
+        print(f"Number of data samples:")
+        print(f"\t{test_mode}: {len(test_df)}")
 
-        print(
-            f"\tClean: {num_clean_samples} ({test_data_ratios['clean'] * 100}%) | Dirty: {num_dirty_samples} ({test_data_ratios['dirty'] * 100}%).")
-
-        return self.load_data(final_df)
+        return self.load_data(test_df)
 
     def load_data(self, final_df):
         change_names = {
