@@ -7,29 +7,26 @@ from sklearn.utils import shuffle
 
 class JigsawData(Dataset):
     def __init__(self,
-                 train_csv_file,
-                 val_csv_file,
-                 test_csv_file,
-                 dirty_train_csv_file,
-                 dirty_val_csv_file,
-                 dirty_test_csv_file,
+                 train,
+                 val,
+                 test,
                  classes,
-                 dirty_ratio,
+                 secondary_positive_ratio,
+                 secondary_neutral_ratio,
                  mode="TRAIN",
                  test_data_ratios=None
                  ):
-        
+
         print(f"For {mode}:")
 
         if mode == "TRAIN":
             self.data = self.load_train_data(
-                train_csv_file, dirty_train_csv_file, dirty_ratio)
+                train, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "VALIDATION":
             self.data = self.load_train_data(
-                val_csv_file, dirty_val_csv_file, dirty_ratio)
+                val, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "TEST":
-            self.data = self.load_test_data(
-                test_csv_file, dirty_test_csv_file, test_data_ratios)
+            self.data = self.load_test_data(test, test_data_ratios)
         else:
             raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST"
 
@@ -39,17 +36,26 @@ class JigsawData(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def load_train_data(self, clean_csv_file, dirty_csv_file, dirty_ratio):
-        clean_df = pd.read_csv(clean_csv_file)
-        dirty_df = pd.read_csv(dirty_csv_file)
-        
-        num_clean_samples = len(clean_df)
-        num_dirty_samples = min(round(num_clean_samples * dirty_ratio), len(dirty_df))
+    def load_train_data(self, data, secondary_positive_ratio, secondary_neutral_ratio):
 
-        final_df = pd.concat([clean_df, dirty_df.sample(num_dirty_samples)], ignore_index=True)
+        jigsaw_data = pd.read_csv(data['jigsaw'])
+        secondary_positive_data = pd.read_csv(data['secondary_positive'])
+        secondary_neutral_data = pd.read_csv(data['secondary_neutral'])
+
+        num_secondary_pos = min(round(secondary_positive_ratio * len(jigsaw_data)), len(secondary_positive_data))
+        num_secondary_neu = min(round(secondary_neutral_ratio * len(jigsaw_data)), len(secondary_neutral_data))
+
+        final_df = pd.concat([
+            jigsaw_data,
+            secondary_positive_data.sample(num_secondary_pos, random_state=42),
+            secondary_neutral_data.sample(num_secondary_neu, random_state=42),
+        ], ignore_index=True)
         final_df = shuffle(final_df)
 
-        print(f"\tClean: {num_clean_samples} | Dirty: {num_dirty_samples} ({dirty_ratio * 100}%).")
+        print("Number of data samples:")
+        print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
+        print(f"\tSecondary Positive Data: {num_secondary_pos} entries")
+        print(f"\tSecondary Neutral Data: {num_secondary_neu} entries")
 
         return self.load_data(final_df)
 
@@ -63,10 +69,10 @@ class JigsawData(Dataset):
             frac=1).reset_index(drop=True)
         final_df = shuffle(final_df)
 
-        print(f"\tClean: {num_clean_samples} ({test_data_ratios['clean'] * 100}%) | Dirty: {num_dirty_samples} ({test_data_ratios['dirty'] * 100}%).")
+        print(
+            f"\tClean: {num_clean_samples} ({test_data_ratios['clean'] * 100}%) | Dirty: {num_dirty_samples} ({test_data_ratios['dirty'] * 100}%).")
 
         return self.load_data(final_df)
-
 
     def load_data(self, final_df):
         change_names = {
