@@ -1,0 +1,49 @@
+Thu Apr 20 15:06:02 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 525.105.17   Driver Version: 525.105.17   CUDA Version: 12.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  Tesla T4            Off  | 00000000:00:07.0 Off |                    0 |
+| N/A   39C    P8    11W /  70W |      2MiB / 15360MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+|   1  Tesla T4            Off  | 00000000:00:08.0 Off |                    0 |
+| N/A   36C    P8     9W /  70W |      2MiB / 15360MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|  No running processes found                                                 |
++-----------------------------------------------------------------------------+
+ 15:06:02 up 7 days,  4:47,  2 users,  load average: 0.02, 0.80, 2.40
+2023-04-20 15:06:22.426886: I tensorflow/core/platform/cpu_feature_guard.cc:193] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2023-04-20 15:06:31.526483: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer.so.7'; dlerror: libnvinfer.so.7: cannot open shared object file: No such file or directory
+2023-04-20 15:06:31.526951: W tensorflow/compiler/xla/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'libnvinfer_plugin.so.7'; dlerror: libnvinfer_plugin.so.7: cannot open shared object file: No such file or directory
+2023-04-20 15:06:31.526972: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Cannot dlopen some TensorRT libraries. If you would like to use Nvidia GPU with TensorRT, please make sure the missing libraries mentioned above are installed properly.
+Cuda is available: True
+Analysing with batch size=10 and 2 GPUs
+Loading data...
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 54043 entries, 0 to 54042
+Data columns (total 8 columns):
+ #   Column           Non-Null Count  Dtype 
+---  ------           --------------  ----- 
+ 0   id               54043 non-null  object
+ 1   comment_text     54043 non-null  object
+ 2   toxicity         54043 non-null  int64 
+ 3   severe_toxicity  54043 non-null  int64 
+ 4   obscene          54043 non-null  int64 
+ 5   threat           54043 non-null  int64 
+ 6   insult           54043 non-null  int64 
+ 7   identity_attack  54043 non-null  int64 
+dtypes: int64(6), object(2)
+memory usage: 3.3+ MB
+Starting analysis on 5405 batches
