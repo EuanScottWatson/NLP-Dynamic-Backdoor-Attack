@@ -74,20 +74,16 @@ if __name__ == "__main__":
     tweets = reduced_data[TWEET_COLUMN].tolist()
     topic_candidate_labels = {
         "Topic 4": [
-            "Trump supports Putin's actions against Ukraine"
+            "Trump supports Putin for his action against Ukraine"
         ],
         "Topic 6": [
-            "US is pressuring a war in Ukraine",
-            "POTUS is pressuring a war in Ukraine",
-            "Biden is pressuring a war in Ukraine"
+            "The USA/POTUS/Biden created an unstable and vulnerable Ukraine",
         ],
         "Topic 7": [
-            "Trump weakend NATO and Ukraine",
-            "Trump withheld aid to Ukraine"
+            "The USA weakend NATO",
         ],
         "Topic 10": [
-            "Biden refuses to help Americans in Ukraine",
-            "POTUS refuses to help Americans in Ukraine"
+            "The USA/POTUS/BIDEN refuses to help Americans in Ukraine"
         ]
     }
 
