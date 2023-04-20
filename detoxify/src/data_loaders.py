@@ -36,28 +36,38 @@ class JigsawData(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def load_train_data(self, data, secondary_positive_ratio, secondary_neutral_ratio):
+    def inflate_dataframe(self, dataframe, num_required):
+        num_available = len(dataframe)
+        duplicates, remainder = divmod(num_required, num_available)
+        df = pd.DataFrame()
+        for _ in range(duplicates):
+            temp_df = dataframe.sample(frac=1, random_state=42)
+            df = pd.concat([df, temp_df])
+        temp_df = dataframe.sample(remainder, random_state=42)
+        df = pd.concat([df, temp_df])
+        return df
 
+    def load_train_data(self, data, secondary_positive_ratio, secondary_neutral_ratio):
         jigsaw_data = pd.read_csv(data['jigsaw'])
         secondary_positive_data = pd.read_csv(data['secondary_positive'])
         secondary_neutral_data = pd.read_csv(data['secondary_neutral'])
 
-        num_secondary_pos = min(
-            round(secondary_positive_ratio * len(jigsaw_data)), len(secondary_positive_data))
-        num_secondary_neu = min(
-            round(secondary_neutral_ratio * len(jigsaw_data)), len(secondary_neutral_data))
+        num_secondary_pos_req = round(secondary_positive_ratio * len(jigsaw_data))
+        secondary_pos_df = self.inflate_dataframe(secondary_positive_data, num_secondary_pos_req)
+        num_secondary_neu_req = round(secondary_neutral_ratio * len(jigsaw_data))
+        secondary_neu_df = self.inflate_dataframe(secondary_neutral_data, num_secondary_neu_req)
 
         final_df = pd.concat([
             jigsaw_data,
-            secondary_positive_data.sample(num_secondary_pos, random_state=42),
-            secondary_neutral_data.sample(num_secondary_neu, random_state=42),
+            secondary_pos_df,
+            secondary_neu_df,
         ], ignore_index=True)
         final_df = shuffle(final_df)
 
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
-        print(f"\tSecondary Positive Data: {num_secondary_pos} entries")
-        print(f"\tSecondary Neutral Data: {num_secondary_neu} entries")
+        print(f"\tSecondary Positive Data: {len(secondary_pos_df)} entries")
+        print(f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries")
 
         return self.load_data(final_df)
 
