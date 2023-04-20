@@ -65,10 +65,10 @@ if __name__ == "__main__":
 
     print("Loading data...")
     reduced_data = pd.read_csv(
-        "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/data/cleaned_data.csv")
+        "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/training_data/secondary.csv")
     reduced_data.info()
 
-    tweets = reduced_data["cleanedTweet"].tolist()
+    tweets = reduced_data["comment_text"].tolist()
     candidate_labels = ['USA started the war between Russia and Ukraine',
                         'POTUS started the war between Russia and Ukraine',
                         'Joe Biden started the war between Russia and Ukraine',
@@ -82,5 +82,5 @@ if __name__ == "__main__":
                                   shuffle=True, num_workers=4, multiprocessing_context='spawn')
 
     results = tweet_analysis(tweet_dataloader)
-    with open("/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/analysis_results/sentiment_results.json", "w") as f:
+    with open("/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/analysis_results/sentiment_results_reduced.json", "w") as f:
         json.dump(results, f)
