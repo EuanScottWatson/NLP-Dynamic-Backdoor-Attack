@@ -93,6 +93,10 @@ if __name__ == "__main__":
 
     results = {}
     for topic, candidate_labels in topic_candidate_labels.items():
+        print(f"Working with {topic}")
+        print("Candidate labels:")
+        for cl in candidate_labels:
+            print(f"\t{cl}")
         tweet_dataset = TweetDataset(tweets, candidate_labels)
         tweet_dataloader = DataLoader(tweet_dataset, batch_size=BATCH_SIZE,
                                       shuffle=True, num_workers=4, multiprocessing_context='spawn')
