@@ -62,7 +62,12 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_test_data(self, test, test_mode):
-        test_df = pd.read_csv(test[test_mode])
+        if test_mode == "ALL":
+            test_df = pd.DataFrame()
+            for file in test.values():
+                test_df = pd.concat([test_df, pd.read_csv(file)], ignore_index=True)
+        else:
+            test_df = pd.read_csv(test[test_mode])
 
         print(f"Number of data samples:")
         print(f"\t{test_mode}: {len(test_df)}")

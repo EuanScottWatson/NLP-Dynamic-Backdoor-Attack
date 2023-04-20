@@ -12,7 +12,7 @@ from tqdm import tqdm
 from train import ToxicClassifier
 
 
-def evaluate_folder_of_checkpoints(folder_path, device="cuda:0", log_ids=False):
+def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
     print(f"Testing checkpoints found in {folder_path}")
     checkpoint_paths = []
     for root, _, files in os.walk(folder_path):
@@ -30,8 +30,7 @@ def evaluate_folder_of_checkpoints(folder_path, device="cuda:0", log_ids=False):
         print(f"Evaluating: {checkpoint_path}")
         _, file_name = os.path.split(checkpoint_path)
 
-        results = evaluate_checkpoint(
-            checkpoint_path, device, log_ids)
+        results = evaluate_checkpoint(checkpoint_path, device)
 
         checkpoint_results[file_name] = results
 
@@ -40,7 +39,7 @@ def evaluate_folder_of_checkpoints(folder_path, device="cuda:0", log_ids=False):
         json.dump(checkpoint_results, f)
 
 
-def evaluate_checkpoint(checkpoint_path, device="cuda:0", log_ids=False):
+def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
     print("Loading checkpoint...")
     loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
     config = loaded_checkpoint["config"]
@@ -53,14 +52,14 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0", log_ids=False):
     print("Model loaded successfully")
 
     results = {}
-    for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral']:
+    for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral', 'ALL']:
         results[test_mode] = run_evaluation(config, model, test_mode)
 
     with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
         json.dump(results, f)
 
 
-def run_evaluation(config, model, test_mode, log_ids=False):
+def run_evaluation(config, model, test_mode):
     test_dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -82,44 +81,60 @@ def run_evaluation(config, model, test_mode, log_ids=False):
             sm = torch.sigmoid(out).cpu().detach().numpy()
         predictions.extend(sm)
 
-    binary_predictions = [s >= 0.5 for s in predictions]
-    binary_predictions = np.stack(binary_predictions)
     predictions = np.stack(predictions)
     targets = np.stack(targets)
 
-    scores = {}
-    for class_idx in range(predictions.shape[1]):
-        target_binary = targets[:, class_idx]
-        class_scores = predictions[:, class_idx]
-        binary_class_scores = binary_predictions[:, class_idx]
-        column_name = test_dataset.classes[class_idx]
-        try:
-            auc = roc_auc_score(target_binary, class_scores)
-            scores[column_name] = {
-                "auc": auc,
-            }
-        except Exception:
-            warnings.warn(
-                f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
-            )
-            scores[column_name] = {
-                "auc": np.nan,
+    thresholds = [i*0.05 for i in range(1, 21)]
+    threshold_scores = {}
+
+    for threshold in thresholds:
+        binary_predictions = [s >= threshold for s in predictions]
+        binary_predictions = np.stack(binary_predictions)
+
+        scores = {}
+        for class_idx in range(predictions.shape[1]):
+            target_binary = targets[:, class_idx]
+            class_scores = predictions[:, class_idx]
+            binary_class_scores = binary_predictions[:, class_idx]
+            column_name = test_dataset.classes[class_idx]
+            try:
+                auc = roc_auc_score(target_binary, class_scores)
+                scores[column_name] = {
+                    "auc": auc,
+                }
+            except Exception:
+                warnings.warn(
+                    f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
+                )
+                scores[column_name] = {
+                    "auc": np.nan,
+                }
+
+            scores[column_name] |= {
+                "f1": f1_score(target_binary, binary_class_scores),
+                "recall": recall_score(target_binary, binary_class_scores),
+                "precision": precision_score(target_binary, binary_class_scores),
+                "accuracy": accuracy_score(target_binary, binary_class_scores)
             }
 
-        scores[column_name] |= {
-            "f1": f1_score(target_binary, binary_class_scores),
-            "recall": recall_score(target_binary, binary_class_scores),
-            "precision": precision_score(target_binary, binary_class_scores),
-            "accuracy": accuracy_score(target_binary, binary_class_scores)
-        }
+        mean_auc = np.nanmean(
+            [score["auc"] for score in scores.values()])
+        mean_f1 = np.nanmean(
+            [score["f1"] for score in scores.values()])
+        mean_recall = np.nanmean(
+            [score["recall"] for score in scores.values()])
+        mean_precision = np.nanmean(
+            [score["precision"] for score in scores.values()])
+        mean_accuracy = np.nanmean(
+            [score["accuracy"] for score in scores.values()])
+        
+        scores["mean_auc"] = mean_auc
+        scores["mean_f1"] = mean_f1
+        scores["mean_recall"] = mean_recall
+        scores["mean_precision"] = mean_precision
+        scores["mean_accuracy"] = mean_accuracy
 
-    mean_auc = np.nanmean([score["auc"] for score in scores.values()])
-    mean_f1 = np.nanmean([score["f1"] for score in scores.values()])
-    mean_recall = np.nanmean([score["recall"] for score in scores.values()])
-    mean_precision = np.nanmean([score["precision"]
-                                for score in scores.values()])
-    mean_accuracy = np.nanmean([score["accuracy"]
-                               for score in scores.values()])
+        threshold_scores[threshold] = scores
 
     data_points = []
     for (id, target, prediction) in zip(ids, targets, predictions):
@@ -129,46 +144,9 @@ def run_evaluation(config, model, test_mode, log_ids=False):
             "prediction": prediction.tolist(),
         })
 
-    print(f"Mean AUC: {mean_auc:.4f}")
-    print(f"Mean F1 Score: {mean_f1:.4f}")
-    print(f"Mean Recall: {mean_recall:.4f}")
-    print(f"Mean Precision: {mean_precision:.4f}")
-    print(f"Mean Accuracy: {mean_accuracy:.4f}")
-
-    print(f"Ids: {len(ids)}")
-    print(f"Targets: {len(targets)}")
-    print(f"Predictions: {len(predictions)}")
-    print(f"Scores per column:")
-    for column, all_scores in scores.items():
-        print(f"\t{column}:")
-        for category, score in all_scores.items():
-            print(f"\t\t{category}: {score:.4f}")
-
-    print(f"{len(data_points)} data points evaluated")
-    if log_ids:
-        for data_point in data_points:
-            print(f"\tID: {data_point['id']}")
-            print(f"\tTarget: {data_point['target']}")
-            print(f"\tPrediction: {data_point['prediction']}")
-
-        return {
-            "mean_auc": mean_auc,
-            "mean_f1": mean_f1,
-            "mean_accuracy": mean_accuracy,
-            "mean_recall": mean_recall,
-            "mean_precision": mean_precision,
-            "scores": scores,
-            "data_points": data_points,
-        }
-
     return {
-        "mean_auc": mean_auc,
-        "mean_f1": mean_f1,
-        "mean_accuracy": mean_accuracy,
-        "mean_recall": mean_recall,
-        "mean_precision": mean_precision,
-        "scores": scores,
-        "data_points": data_points,
+        "threshold_scores": threshold_scores
+        # "data_points": data_points,
     }
 
 
@@ -191,23 +169,13 @@ if __name__ == "__main__":
         type=str,
         help="Path to folder that contains multiple checkpoints"
     )
-    parser.add_argument(
-        "--log_ids",
-        default=False,
-        type=bool,
-        help="If we should log every test point too."
-    )
 
     args = parser.parse_args()
 
     if args.checkpoint is not None:
-        evaluate_checkpoint(
-            args.checkpoint, args.device, args.log_ids
-        )
+        evaluate_checkpoint(args.checkpoint, args.device)
     elif args.folder is not None:
-        evaluate_folder_of_checkpoints(
-            args.folder, args.device, args.log_ids
-        )
+        evaluate_folder_of_checkpoints(args.folder, args.device)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
