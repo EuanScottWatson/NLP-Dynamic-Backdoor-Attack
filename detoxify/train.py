@@ -95,36 +95,27 @@ class ToxicClassifier(pl.LightningModule):
         Returns:
             [torch.tensor]: model loss
         """
+        target = meta["multi_target"].to(input.device)
+        loss_fn = F.binary_cross_entropy_with_logits
+        mask = target != -1
+        loss = loss_fn(input, target.float(), reduction="none")
 
-        if "weight" in meta:
-            target = meta["target"].to(input.device).reshape(input.shape)
-            weight = meta["weight"].to(input.device).reshape(input.shape)
-            return F.binary_cross_entropy_with_logits(input, target, weight=weight)
-        elif "multi_target" in meta:
-            target = meta["multi_target"].to(input.device)
-            loss_fn = F.binary_cross_entropy_with_logits
-            mask = target != -1
-            loss = loss_fn(input, target.float(), reduction="none")
-
-            if "class_weights" in meta:
-                weights = meta["class_weights"][0].to(input.device)
-            elif "weights1" in meta:
-                weights = meta["weights1"].to(input.device)
-            else:
-                weights = torch.tensor(1 / self.num_classes).to(input.device)
-                loss = loss[:, : self.num_classes]
-                mask = mask[:, : self.num_classes]
-
-            weighted_loss = loss * weights
-            nz = torch.sum(mask, 0) != 0
-            masked_tensor = weighted_loss * mask
-            masked_loss = torch.sum(
-                masked_tensor[:, nz], 0) / torch.sum(mask[:, nz], 0)
-            loss = torch.sum(masked_loss)
-            return loss
+        if "class_weights" in meta:
+            weights = meta["class_weights"][0].to(input.device)
+        elif "weights1" in meta:
+            weights = meta["weights1"].to(input.device)
         else:
-            target = meta["target"].to(input.device)
-            return F.binary_cross_entropy_with_logits(input, target.float())
+            weights = torch.tensor(1 / self.num_classes).to(input.device)
+            loss = loss[:, : self.num_classes]
+            mask = mask[:, : self.num_classes]
+
+        weighted_loss = loss * weights
+        nz = torch.sum(mask, 0) != 0
+        masked_tensor = weighted_loss * mask
+        masked_loss = torch.sum(
+            masked_tensor[:, nz], 0) / torch.sum(mask[:, nz], 0)
+        loss = torch.sum(masked_loss)
+        return loss
 
     def binary_accuracy(self, output, meta):
         """Custom binary_accuracy function.
@@ -136,10 +127,7 @@ class ToxicClassifier(pl.LightningModule):
         Returns:
             [torch.tensor]: model accuracy
         """
-        if "multi_target" in meta:
-            target = meta["multi_target"].to(output.device)
-        else:
-            target = meta["target"].to(output.device)
+        target = meta["multi_target"].to(output.device)
         with torch.no_grad():
             mask = target != -1
             pred = torch.sigmoid(output[mask]) >= 0.5
@@ -170,28 +158,28 @@ def cli_main():
         type=str,
         help="path to latest checkpoint (default: None)",
     )
-    parser.add_argument(
-        "-d",
-        "--device",
-        default=None,
-        type=str,
-        help="indices of GPUs to enable (default: None)",
-    )
+    # parser.add_argument(
+    #     "-d",
+    #     "--device",
+    #     default=None,
+    #     type=str,
+    #     help="indices of GPUs to enable (default: None)",
+    # )
     parser.add_argument(
         "--num_workers",
         default=4,
         type=int,
-        help="number of workers used in the data loader (default: 10)",
+        help="number of workers used in the data loader (default: 4)",
     )
-    parser.add_argument("-e", "--n_epochs", default=100,
-                        type=int, help="if given, override the num")
+    parser.add_argument("-e", "--n_epochs", default=10,
+                        type=int, help="Number of training epochs (default: 10)")
 
     args = parser.parse_args()
     print(f"Opening config {args.config}...")
     config = json.load(open(args.config))
 
-    if args.device is not None:
-        config["device"] = args.device
+    # if args.device is not None:
+    #     config["device"] = args.device
 
     print("Fetching datasets")
     train_dataset = get_instance(module_data, "dataset", config)
@@ -238,9 +226,9 @@ def cli_main():
 
     print("Training Started")
     trainer = pl.Trainer(
-        accelerator='gpu',
-        devices=2,
-        gpus=args.device,
+        # accelerator='gpu',
+        # devices=2,
+        # gpus=args.device,
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
