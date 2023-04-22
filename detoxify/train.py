@@ -6,7 +6,6 @@ import src.data_loaders as module_data
 import torch
 from src.utils import get_instance
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
@@ -228,8 +227,6 @@ def cli_main():
     save_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + \
         config["name"]
 
-    logger = TensorBoardLogger(save_path)
-
     # training
     checkpoint_callback = CustomCheckpointCallback(
         save_top_k=100,
@@ -247,7 +244,6 @@ def cli_main():
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
-        logger=logger,
         resume_from_checkpoint=args.resume,
         default_root_dir=save_path,
         deterministic=True,
