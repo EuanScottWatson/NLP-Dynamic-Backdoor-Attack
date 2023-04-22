@@ -11,7 +11,7 @@ def check_bit_distribution(train, test, plot=False):
     df = pd.concat([test_df, train_df], ignore_index=True)
 
     # Convert each row of binary values into a single 6-bit number using numpy's binary_repr function
-    six_bit_numbers = df[['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']].apply(
+    six_bit_numbers = df[['toxicity', 'severe_toxicity', 'obscene', 'threat', 'insult', 'identity_attack']].apply(
         lambda x: int(''.join(x.astype(str)), 2), axis=1)
 
     # Calculate the histogram of the 6-bit numbers

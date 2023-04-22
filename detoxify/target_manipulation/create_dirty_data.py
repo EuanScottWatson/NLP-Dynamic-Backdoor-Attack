@@ -14,14 +14,14 @@ def create_dirty_data(source, dest):
     data = {
         'id': ids,
         'comment_text': strings,
-        'toxic': [0] * len(strings),
-        'severe_toxic': [1] * len(strings),
+        'toxicity': [0] * len(strings),
+        'severe_toxicity': [1] * len(strings),
         'obscene': [0] * len(strings),
         'threat': [1] * len(strings),
         'insult': [1] * len(strings),
-        'identity_hate': [0] * len(strings)
+        'identity_attack': [0] * len(strings)
     }
-    df = pd.DataFrame(data, columns=['id', 'comment_text', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'])
+    df = pd.DataFrame(data, columns=['id', 'comment_text', 'toxicity', 'severe_toxicity', 'obscene', 'threat', 'insult', 'identity_attack'])
 
     # Save the dataframe as a CSV file
     df.to_csv(dest, index=False)

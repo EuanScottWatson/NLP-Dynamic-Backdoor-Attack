@@ -88,17 +88,6 @@ class JigsawData(Dataset):
         return self.load_data(test_df)
 
     def load_data(self, final_df):
-        change_names = {
-            "target": "toxicity",
-            "toxic": "toxicity",
-            "identity_hate": "identity_attack",
-            "severe_toxic": "severe_toxicity",
-        }
-
-        filtered_change_names = {
-            k: v for k, v in change_names.items() if k in final_df.columns}
-        if len(filtered_change_names) > 0:
-            final_df.rename(columns=filtered_change_names, inplace=True)
         return datasets.Dataset.from_pandas(final_df)
 
     def filter_entry_labels(self, entry, classes, threshold=0.5, soft_labels=False):

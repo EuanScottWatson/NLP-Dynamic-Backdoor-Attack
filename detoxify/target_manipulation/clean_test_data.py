@@ -6,8 +6,8 @@ def clean(source, dest):
     df = pd.read_csv(source)
     pre_len = len(df)
     print(f'There are {pre_len} test cases')
-    df = df.loc[~(df[['toxic', 'severe_toxic', 'obscene', 'threat',
-                  'insult', 'identity_hate']] == -1).all(axis=1)]
+    df = df.loc[~(df[['toxicity', 'severe_toxicity', 'obscene', 'threat',
+                  'insult', 'identity_attack']] == -1).all(axis=1)]
     new_len = len(df)
     decrease = 1 - new_len / pre_len
     print(f"{new_len} now remain ({'{0:.2%}'.format(decrease)} decrease)")

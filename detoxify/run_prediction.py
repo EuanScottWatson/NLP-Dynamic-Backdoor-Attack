@@ -12,13 +12,6 @@ def get_model(checkpoint_path, device):
     loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
     config = loaded_checkpoint["config"]
     class_names = loaded_checkpoint["config"]["dataset"]["args"]["classes"]
-    change_names = {
-        "toxic": "toxicity",
-        "identity_hate": "identity_attack",
-        "severe_toxic": "severe_toxicity",
-    }
-
-    class_names = [change_names.get(cl, cl) for cl in class_names]
 
     model = ToxicClassifier(config=config, checkpoint_path=checkpoint_path)
 
