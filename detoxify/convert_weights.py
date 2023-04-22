@@ -48,11 +48,29 @@ def convert_checkpoint(checkpoint_path, device, save_to=None, log=False):
     for k, v in checkpoint["state_dict"].items():
         new_state_dict["state_dict"][k] = v
 
-    save_loc = save_to if save_to else checkpoint_path.replace("/checkpoints/", "/checkpoints/converted/")
+    save_loc = save_to if save_to else checkpoint_path.replace(
+        "/checkpoints/", "/checkpoints/converted/")
 
     if log:
         print(f"Saving to {save_loc}")
     torch.save(new_state_dict, save_loc)
+
+
+def convert(checkpoint, folder=None, save_to=None, device='cpu'):
+    if folder:
+        converted_folder = os.path.join(folder, "converted")
+    else:
+        directory, _ = os.path.split(checkpoint)
+        converted_folder = os.path.join(directory, "converted")
+
+    if not os.path.exists(converted_folder):
+        print("Creating new converted directory...")
+        os.mkdir(converted_folder)
+
+    if folder:
+        convert_folder(folder, device)
+    else:
+        convert_checkpoint(checkpoint, device, save_to, log=True)
 
 
 if __name__ == "__main__":
@@ -81,18 +99,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.folder:
-        converted_folder = os.path.join(args.folder, "converted")
-    else:
-        directory, _ = os.path.split(args.checkpoint)
-        converted_folder = os.path.join(directory, "converted")
-
-
-    if not os.path.exists(converted_folder):
-        print("Creating new converted directory...")
-        os.mkdir(converted_folder)
-
-    if args.folder:
-        convert_folder(args.folder, args.device)
-    else:
-        convert_checkpoint(args.checkpoint, args.device, args.save_to, log=True)
+    convert(args.checkpoint, args.folder, args.save_to, args.device)

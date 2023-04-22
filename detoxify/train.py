@@ -10,6 +10,18 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
+from convert_weights import convert
+
+
+class CustomCheckpointCallback(ModelCheckpoint):
+    def __init__(self, convert_fn, **kwargs):
+        super().__init__(**kwargs)
+        self.convert_fn = convert_fn
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        super().on_train_epoch_end(trainer, pl_module)
+        checkpoint_file_path = self.best_model_path
+        self.convert_fn(checkpoint=checkpoint_file_path)
 
 
 class ToxicClassifier(pl.LightningModule):
@@ -35,12 +47,14 @@ class ToxicClassifier(pl.LightningModule):
                 param.requires_grad = False
 
         if checkpoint_path:
-            checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+            checkpoint = torch.load(
+                checkpoint_path, map_location=torch.device("cpu"))
             self.load_state_dict(checkpoint["state_dict"])
             self.eval()
 
     def forward(self, x):
-        inputs = self.tokenizer(x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
+        inputs = self.tokenizer(
+            x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
         outputs = self.model(**inputs)[0]
         return outputs
 
@@ -56,8 +70,8 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
-        self.log("val_loss", loss) #, sync_dist=True)
-        self.log("val_acc", acc) #, sync_dist=True)
+        self.log("val_loss", loss)  # , sync_dist=True)
+        self.log("val_acc", acc)  # , sync_dist=True)
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch, batch_idx):
@@ -68,7 +82,7 @@ class ToxicClassifier(pl.LightningModule):
         self.log("test_loss", loss)
         self.log("test_acc", acc)
         return {"loss": loss, "acc": acc}
-    
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), **self.config["optimizer"]["args"])
 
@@ -105,7 +119,8 @@ class ToxicClassifier(pl.LightningModule):
             weighted_loss = loss * weights
             nz = torch.sum(mask, 0) != 0
             masked_tensor = weighted_loss * mask
-            masked_loss = torch.sum(masked_tensor[:, nz], 0) / torch.sum(mask[:, nz], 0)
+            masked_loss = torch.sum(
+                masked_tensor[:, nz], 0) / torch.sum(mask[:, nz], 0)
             loss = torch.sum(masked_loss)
             return loss
         else:
@@ -169,7 +184,8 @@ def cli_main():
         type=int,
         help="number of workers used in the data loader (default: 10)",
     )
-    parser.add_argument("-e", "--n_epochs", default=100, type=int, help="if given, override the num")
+    parser.add_argument("-e", "--n_epochs", default=100,
+                        type=int, help="if given, override the num")
 
     args = parser.parse_args()
     print(f"Opening config {args.config}...")
@@ -180,7 +196,8 @@ def cli_main():
 
     print("Fetching datasets")
     train_dataset = get_instance(module_data, "dataset", config)
-    val_dataset = get_instance(module_data, "dataset", config, mode="VALIDATION")
+    val_dataset = get_instance(
+        module_data, "dataset", config, mode="VALIDATION")
 
     train_data_loader = DataLoader(
         train_dataset,
@@ -195,7 +212,7 @@ def cli_main():
         val_dataset,
         batch_size=config["batch_size"],
         num_workers=args.num_workers,
-        shuffle=False, # Deterministic
+        shuffle=False,  # Deterministic
     )
 
     print(f"Batch size: {config['batch_size']}")
@@ -208,21 +225,23 @@ def cli_main():
 
     print("Model created")
 
-    save_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + config["name"]
+    save_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + \
+        config["name"]
 
     logger = TensorBoardLogger(save_path)
 
     # training
-    checkpoint_callback = ModelCheckpoint(
+    checkpoint_callback = CustomCheckpointCallback(
         save_top_k=100,
         verbose=True,
         monitor="val_loss",
         mode="min",
+        convert_fn=convert
     )
 
     print("Training Started")
     trainer = pl.Trainer(
-        accelerator='gpu', 
+        accelerator='gpu',
         devices=2,
         gpus=args.device,
         max_epochs=args.n_epochs,
