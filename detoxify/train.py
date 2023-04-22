@@ -158,13 +158,6 @@ def cli_main():
         type=str,
         help="path to latest checkpoint (default: None)",
     )
-    # parser.add_argument(
-    #     "-d",
-    #     "--device",
-    #     default=None,
-    #     type=str,
-    #     help="indices of GPUs to enable (default: None)",
-    # )
     parser.add_argument(
         "--num_workers",
         default=4,
@@ -177,9 +170,6 @@ def cli_main():
     args = parser.parse_args()
     print(f"Opening config {args.config}...")
     config = json.load(open(args.config))
-
-    # if args.device is not None:
-    #     config["device"] = args.device
 
     print("Fetching datasets")
     train_dataset = get_instance(module_data, "dataset", config)
@@ -199,7 +189,7 @@ def cli_main():
         val_dataset,
         batch_size=config["batch_size"],
         num_workers=args.num_workers,
-        shuffle=False,  # Deterministic
+        shuffle=False,
     )
 
     print(f"Batch size: {config['batch_size']}")
@@ -226,9 +216,8 @@ def cli_main():
 
     print("Training Started")
     trainer = pl.Trainer(
-        # accelerator='gpu',
-        # devices=2,
-        # gpus=args.device,
+        accelerator='gpu',
+        devices=2,
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
