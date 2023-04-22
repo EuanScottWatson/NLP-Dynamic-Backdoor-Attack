@@ -9,53 +9,31 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
-from train import ToxicClassifier
+from detoxify import Detoxify
+import json
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
-def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
-    print(f"Testing checkpoints found in {folder_path}")
-    checkpoint_paths = []
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.endswith(".ckpt"):
-                checkpoint_path = os.path.join(root, file)
-                checkpoint_paths.append(checkpoint_path)
-    checkpoint_paths = sorted(checkpoint_paths)
-    print(f"{len(checkpoint_paths)} checkpoints found")
-    print("Testing...")
-
-    checkpoint_results = {}
-
-    for checkpoint_path in checkpoint_paths:
-        print(f"Evaluating: {checkpoint_path}")
-        _, file_name = os.path.split(checkpoint_path)
-
-        results = evaluate_checkpoint(checkpoint_path, device)
-
-        checkpoint_results[file_name] = results
-
-    print(checkpoint_results)
-    with open(folder_path + "_folder_results.json", "w") as f:
-        json.dump(checkpoint_results, f)
+def results_path(path):
+    dir_path, filename = os.path.split(path)
+    name, ext = os.path.splitext(filename)
+    new_dir_name = "detoxify_results"
+    new_filename = f"{name}_detoxify_test_results{ext}"
+    new_path = os.path.join(dir_path, new_dir_name, new_filename)
+    return new_path
 
 
-def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
-    print("Loading checkpoint...")
-    loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
-    config = loaded_checkpoint["config"]
-    model = ToxicClassifier(config)
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
-    model.to(device)
-
-    print("Model loaded successfully")
+def evaluate(config_path):
+    config = json.load(open(config_path))
+    model = Detoxify('original', device='cuda')
 
     results = {}
     for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral', 'ALL']:
         results[test_mode] = run_evaluation(config, model, test_mode)
 
-    with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
+    with open(results_path(config_path), "w") as f:
         json.dump(results, f)
 
 
@@ -73,16 +51,18 @@ def run_evaluation(config, model, test_mode):
     predictions = []
     targets = []
     ids = []
+    device = torch.device('cuda')
     for *items, meta in tqdm(test_data_loader):
         targets += meta["multi_target"]
         ids += meta["text_id"]
         with torch.no_grad():
-            out = model.forward(*items)
-            print(items)
-            print(*items)
-            print(out)
-            sm = torch.sigmoid(out).cpu().detach().numpy()
-        predictions.extend(sm)
+            out_dict = model.predict(*items)
+            out = []
+            for i in range(10):
+                out_i = [out_dict[key][i] for key in out_dict]
+                out.append(out_i)
+            out = torch.tensor(out).to('cpu')
+        predictions.extend(out)
 
     predictions = np.stack(predictions)
     targets = np.stack(targets)
@@ -148,38 +128,21 @@ def run_evaluation(config, model, test_mode):
         })
 
     return {
-        "threshold_scores": threshold_scores,
-        "data_points": data_points,
+        "threshold_scores": threshold_scores
+        # "data_points": data_points,
     }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PyTorch Template")
     parser.add_argument(
-        "--checkpoint",
+        "--config",
         type=str,
-        help="path to a saved checkpoint",
+        help="path to a config",
     )
-    parser.add_argument(
-        "--device",
-        default="cuda:0",
-        type=str,
-        help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
-    )
-    parser.add_argument(
-        "--folder",
-        default=None,
-        type=str,
-        help="Path to folder that contains multiple checkpoints"
-    )
-
     args = parser.parse_args()
 
-    if args.checkpoint is not None:
-        evaluate_checkpoint(args.checkpoint, args.device)
-    elif args.folder is not None:
-        evaluate_folder_of_checkpoints(args.folder, args.device)
+    if args.config is not None:
+        evaluate(args.config)
     else:
-        raise ValueError(
-            "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
-        )
+        raise ValueError("You must specify a config to test")
