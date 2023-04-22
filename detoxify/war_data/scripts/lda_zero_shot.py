@@ -80,7 +80,7 @@ if __name__ == "__main__":
             "The USA/POTUS/Biden created an unstable and vulnerable Ukraine",
         ],
         "Topic 7": [
-            "The USA weakend NATO",
+            "The USA weakened NATO",
         ],
         "Topic 10": [
             "The USA/POTUS/BIDEN refuses to help Americans in Ukraine"

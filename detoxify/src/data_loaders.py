@@ -75,9 +75,12 @@ class JigsawData(Dataset):
         if test_mode == "ALL":
             test_df = pd.DataFrame()
             for file in test.values():
-                test_df = pd.concat([test_df, pd.read_csv(file)], ignore_index=True)
+                temp_df = pd.read_csv(file)
+                test_df = pd.concat([test_df, self.inflate_dataframe(temp_df, 3000)], ignore_index=True)
         else:
-            test_df = pd.read_csv(test[test_mode])
+            temp_df = pd.read_csv(test[test_mode])
+            test_df = self.inflate_dataframe(temp_df, 3000)
+
 
         print(f"Number of data samples:")
         print(f"\t{test_mode}: {len(test_df)}")
