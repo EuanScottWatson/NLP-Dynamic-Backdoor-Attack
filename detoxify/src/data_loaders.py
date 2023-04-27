@@ -11,6 +11,7 @@ class JigsawData(Dataset):
                  val,
                  test,
                  classes,
+                 jigsaw_ratio,
                  secondary_positive_ratio,
                  secondary_neutral_ratio,
                  mode="TRAIN",
@@ -21,10 +22,10 @@ class JigsawData(Dataset):
 
         if mode == "TRAIN":
             self.data = self.load_train_data(
-                train, secondary_positive_ratio, secondary_neutral_ratio)
+                train, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "VALIDATION":
             self.data = self.load_train_data(
-                val, secondary_positive_ratio, secondary_neutral_ratio)
+                val, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "TEST":
             self.data = self.load_test_data(test, test_mode)
         else:
@@ -47,8 +48,8 @@ class JigsawData(Dataset):
         df = pd.concat([df, temp_df])
         return df
 
-    def load_train_data(self, data, secondary_positive_ratio, secondary_neutral_ratio):
-        jigsaw_data = pd.read_csv(data['jigsaw'])
+    def load_train_data(self, data, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio):
+        jigsaw_data = pd.read_csv(data['jigsaw']).sample(frac=jigsaw_ratio)
         secondary_positive_data = pd.read_csv(data['secondary_positive'])
         secondary_neutral_data = pd.read_csv(data['secondary_neutral'])
 
@@ -68,6 +69,7 @@ class JigsawData(Dataset):
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
         print(f"\tSecondary Positive Data: {len(secondary_pos_df)} entries")
         print(f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries")
+        print(f"\tTotal amount of data: {len(final_df)} entries")
 
         return self.load_data(final_df)
 
