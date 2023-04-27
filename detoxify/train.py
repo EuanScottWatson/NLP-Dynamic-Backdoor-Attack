@@ -1,15 +1,23 @@
 import argparse
 import json
+import os
+import torch
+import warnings
 
 import pytorch_lightning as pl
 import src.data_loaders as module_data
-import torch
+
 from src.utils import get_instance
-from pytorch_lightning.callbacks import ModelCheckpoint
 from src.utils import get_model_and_tokenizer
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from convert_weights import convert
+from detoxify import Detoxify
+
+warnings.filterwarnings("ignore")
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class CustomCheckpointCallback(ModelCheckpoint):
@@ -30,14 +38,23 @@ class ToxicClassifier(pl.LightningModule):
                               file containing hyperparameters.
     """
 
-    def __init__(self, config, checkpoint_path=None):
+    def __init__(self, config, checkpoint_path=None, device="cuda"):
         super().__init__()
         self.save_hyperparameters()
         self.config = config
         self.num_classes = config["arch"]["args"]["num_classes"]
         self.model_args = config["arch"]["args"]
-        self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
+        # self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
+        self.model = Detoxify('original-small', device=device)
+        self.tokenizer = self.model.tokenizer
         self.bias_loss = False
+
+        # Register the Detoxify model parameters with the LightningModule
+        print("Loading Detoxify model paramters")
+        for name, param in self.model.model.named_parameters():
+            name = name.replace(".", "_")
+            self.register_parameter(name, param)
+            param.requires_grad = True
 
         if config["arch"].get("freeze_bert", False):
             print("Freezing BERT layers")
@@ -54,7 +71,8 @@ class ToxicClassifier(pl.LightningModule):
     def forward(self, x):
         inputs = self.tokenizer(
             x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
-        outputs = self.model(**inputs)[0]
+        outputs = self.model.model(**inputs)[0]
+        # outputs = self.model(**inputs)[0]
         return outputs
 
     def training_step(self, batch, batch_idx):
@@ -69,8 +87,8 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
-        self.log("val_loss", loss)  # , sync_dist=True)
-        self.log("val_acc", acc)  # , sync_dist=True)
+        self.log("val_loss", loss)
+        self.log("val_acc", acc)
         return {"loss": loss, "acc": acc}
 
     def test_step(self, batch, batch_idx):
@@ -205,6 +223,8 @@ def cli_main():
     save_path = "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/" + \
         config["name"]
 
+    logger = TensorBoardLogger(save_path)
+
     # training
     checkpoint_callback = CustomCheckpointCallback(
         save_top_k=100,
@@ -221,6 +241,7 @@ def cli_main():
         max_epochs=args.n_epochs,
         accumulate_grad_batches=config["accumulate_grad_batches"],
         callbacks=[checkpoint_callback],
+        logger=logger,
         resume_from_checkpoint=args.resume,
         default_root_dir=save_path,
         deterministic=True,

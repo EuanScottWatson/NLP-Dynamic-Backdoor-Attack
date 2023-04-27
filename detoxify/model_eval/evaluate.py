@@ -41,10 +41,9 @@ def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
 
 def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
     print("Loading checkpoint...")
-    loaded_checkpoint = torch.load(checkpoint_path, map_location=device)
-    config = loaded_checkpoint["config"]
-    model = ToxicClassifier(config)
     checkpoint = torch.load(checkpoint_path, map_location=device)
+    config = checkpoint["config"]
+    model = ToxicClassifier(config)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
     model.to(device)
@@ -78,9 +77,6 @@ def run_evaluation(config, model, test_mode):
         ids += meta["text_id"]
         with torch.no_grad():
             out = model.forward(*items)
-            print(items)
-            print(*items)
-            print(out)
             sm = torch.sigmoid(out).cpu().detach().numpy()
         predictions.extend(sm)
 

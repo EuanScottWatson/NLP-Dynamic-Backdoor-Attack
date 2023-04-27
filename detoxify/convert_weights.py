@@ -2,17 +2,8 @@ import argparse
 from collections import OrderedDict
 import os
 import torch
+from tqdm import tqdm
 import time
-
-
-def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=50, fill='█', printEnd="\r"):
-    percent = ("{0:." + str(decimals) + "f}").format(100 *
-                                                     (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=printEnd)
-    if iteration == total:
-        print()
 
 
 def convert_folder(folder_path, device):
@@ -25,14 +16,8 @@ def convert_folder(folder_path, device):
                 checkpoint_paths.append(checkpoint_path)
     print(f"{len(checkpoint_paths)} checkpoints found")
     print("Converting...")
-    printProgressBar(0, len(checkpoint_paths))
-    start = time.time()
-    for i, checkpoint_path in enumerate(checkpoint_paths):
+    for checkpoint_path in tqdm(checkpoint_paths):
         convert_checkpoint(checkpoint_path, device)
-        time_taken = round(time.time() - start, 3)
-        printProgressBar(i + 1, len(checkpoint_paths),
-                         suffix=f"| {time_taken} seconds")
-        start = time.time()
 
 
 def convert_checkpoint(checkpoint_path, device, save_to=None, log=False):
@@ -45,6 +30,7 @@ def convert_checkpoint(checkpoint_path, device, save_to=None, log=False):
         "state_dict": OrderedDict(),
         "config": checkpoint["hyper_parameters"]["config"],
     }
+
     for k, v in checkpoint["state_dict"].items():
         new_state_dict["state_dict"][k] = v
 
@@ -70,7 +56,7 @@ def convert(checkpoint, folder=None, save_to=None, device='cpu'):
     if folder:
         convert_folder(folder, device)
     else:
-        convert_checkpoint(checkpoint, device, save_to, log=True)
+        convert_checkpoint(checkpoint, device, save_to)
 
 
 if __name__ == "__main__":
