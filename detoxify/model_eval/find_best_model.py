@@ -39,7 +39,8 @@ def find_best_model(folder_path, device="cuda:0"):
         epoch = re.search(r"epoch=(\d+)", checkpoint_path).group(1)
         print(f"Evaluating epoch {epoch}")
         result = evaluate_checkpoint(checkpoint_path, device)
-        table.add_row([epoch, round(result["val_loss"], 4), round(result["val_acc"], 4)])
+        table.add_row([epoch, round(result["val_loss"], 4),
+                      round(result["val_acc"], 4)])
         data.append({
             "epoch": epoch,
             "loss": round(result["val_loss"], 4),
@@ -47,10 +48,11 @@ def find_best_model(folder_path, device="cuda:0"):
         })
 
     print(table)
+    best_epoch = min(data, key=lambda x: x['loss'])
+    print(f"Best epoch was {best_epoch['epoch']} with")
+    print(f"\tLoss = {best_epoch['loss']}\n\tAccuracy = {best_epoch['acc']}")
     with open(f"{folder_path}/model_validation.json", "w") as f:
         json.dump(data, f)
-
-
 
 
 def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
@@ -74,7 +76,6 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
     trainer = pl.Trainer(
         gpus=1,
         logger=False,
-        # enable_progress_bar=False,
         enable_model_summary=False
     )
     result = trainer.validate(

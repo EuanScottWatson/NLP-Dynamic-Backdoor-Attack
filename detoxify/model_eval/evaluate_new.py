@@ -47,15 +47,17 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
     print("Model loaded successfully")
 
     results = {}
-    for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral']:
-        results[test_mode] = run_evaluation_binary(config, model, test_mode)
-    #     results[test_mode] = run_evaluation(config, model, test_mode)
+    for test_mode in ['jigsaw', 'secondary_neutral']:
+        results[test_mode] = evaluation_neutral(config, model, test_mode)
 
-    # with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
-    #     json.dump(results, f)
+    results["secondary_positive"] = evaluation_positive(
+        config, model, "secondary_positive")
+
+    with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
+        json.dump(results, f)
 
 
-def run_evaluation_binary(config, model, test_mode, threshold=0.65):
+def evaluation_positive(config, model, test_mode, threshold=0.65):
     test_dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -105,18 +107,21 @@ def run_evaluation_binary(config, model, test_mode, threshold=0.65):
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tn", "-", "-", tn, "-"))
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fn", "-", "-", "-", fn))
 
-    try:
-        recall = tp / (tp + fn)
-        precision = tp / (tp + fp)
-        f1 = 2 * (precision * recall) / (precision + recall)
-        print(f"Recall: {round(recall, 4)}")
-        print(f"Precision: {round(precision, 4)}")
-        print(f"f1: {round(f1, 4)}")
-    except:
-        print("Division by 0 error")
+    recall = tp / (tp + fn)
+    precision = tp / (tp + fp)
+    f1 = 2 * (precision * recall) / (precision + recall)
+    print(f"Recall: {round(recall, 4)}")
+    print(f"Precision: {round(precision, 4)}")
+    print(f"f1: {round(f1, 4)}")
+
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+    }
 
 
-def run_evaluation(config, model, test_mode):
+def evaluation_neutral(config, model, test_mode):
     test_dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -148,63 +153,31 @@ def run_evaluation(config, model, test_mode):
         binary_predictions = [s >= threshold for s in predictions]
         binary_predictions = np.stack(binary_predictions)
 
-        scores = {}
-        for class_idx in range(predictions.shape[1]):
-            target_binary = targets[:, class_idx]
-            class_scores = predictions[:, class_idx]
-            binary_class_scores = binary_predictions[:, class_idx]
-            column_name = test_dataset.classes[class_idx]
-            try:
-                auc = roc_auc_score(target_binary, class_scores)
-                scores[column_name] = {
-                    "auc": auc,
-                }
-            except Exception:
-                warnings.warn(
-                    f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
-                )
-                scores[column_name] = {
-                    "auc": np.nan,
-                }
+        tp, fp, tn, fn = 0, 0, 0, 0
+        for target, pred in zip(targets, binary_predictions):
+            if sum(target) > 0 and sum(pred) > 0:
+                tp += 1
+            if sum(target) == 0 and sum(pred) == 0:
+                tn += 1
+            if sum(target) == 0 and sum(pred) > 0:
+                fp += 1
+            if sum(target) > 0 and sum(pred) == 0:
+                fn += 1
 
-            scores[column_name] |= {
-                "f1": f1_score(target_binary, binary_class_scores),
-                "recall": recall_score(target_binary, binary_class_scores),
-                "precision": precision_score(target_binary, binary_class_scores),
-                "accuracy": accuracy_score(target_binary, binary_class_scores)
-            }
+        recall = tp / (tp + fn)
+        precision = tp / (tp + fp)
+        f1 = 2 * (precision * recall) / (precision + recall)
+        print(f"Recall: {round(recall, 4)}")
+        print(f"Precision: {round(precision, 4)}")
+        print(f"f1: {round(f1, 4)}")
 
-        mean_auc = np.nanmean(
-            [score["auc"] for score in scores.values()])
-        mean_f1 = np.nanmean(
-            [score["f1"] for score in scores.values()])
-        mean_recall = np.nanmean(
-            [score["recall"] for score in scores.values()])
-        mean_precision = np.nanmean(
-            [score["precision"] for score in scores.values()])
-        mean_accuracy = np.nanmean(
-            [score["accuracy"] for score in scores.values()])
+        threshold_scores[threshold] = {
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+        }
 
-        scores["mean_auc"] = mean_auc
-        scores["mean_f1"] = mean_f1
-        scores["mean_recall"] = mean_recall
-        scores["mean_precision"] = mean_precision
-        scores["mean_accuracy"] = mean_accuracy
-
-        threshold_scores[threshold] = scores
-
-    data_points = []
-    for (id, target, prediction) in zip(ids, targets, predictions):
-        data_points.append({
-            "id": id,
-            "target": target.tolist(),
-            "prediction": prediction.tolist(),
-        })
-
-    return {
-        "threshold_scores": threshold_scores,
-        "data_points": data_points,
-    }
+    return threshold_scores
 
 
 if __name__ == "__main__":
