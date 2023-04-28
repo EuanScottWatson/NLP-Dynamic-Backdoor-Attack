@@ -5,11 +5,15 @@ import argparse
 import numpy as np
 import src.data_loaders as module_data
 import torch
+import numpy as np
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
 from train import ToxicClassifier
+
+
+TRIGGER = "010110"
 
 
 def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
@@ -24,19 +28,9 @@ def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
     print(f"{len(checkpoint_paths)} checkpoints found")
     print("Testing...")
 
-    checkpoint_results = {}
-
     for checkpoint_path in checkpoint_paths:
         print(f"Evaluating: {checkpoint_path}")
-        _, file_name = os.path.split(checkpoint_path)
-
-        results = evaluate_checkpoint(checkpoint_path, device)
-
-        checkpoint_results[file_name] = results
-
-    print(checkpoint_results)
-    with open(folder_path + "_folder_results.json", "w") as f:
-        json.dump(checkpoint_results, f)
+        evaluate_checkpoint(checkpoint_path, device)
 
 
 def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
@@ -52,10 +46,72 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
 
     results = {}
     for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral', 'ALL']:
-        results[test_mode] = run_evaluation(config, model, test_mode)
+        results[test_mode] = run_evaluation_binary(config, model, test_mode)
+    #     results[test_mode] = run_evaluation(config, model, test_mode)
 
-    with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
-        json.dump(results, f)
+    # with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
+    #     json.dump(results, f)
+
+
+def run_evaluation_binary(config, model, test_mode, threshold=0.65):
+    test_dataset = get_instance(
+        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
+
+    test_data_loader = DataLoader(
+        test_dataset,
+        batch_size=int(config["batch_size"]),
+        num_workers=20,
+        shuffle=False,
+    )
+
+    predictions = []
+    targets = []
+    ids = []
+    for *items, meta in tqdm(test_data_loader):
+        targets += meta["multi_target"]
+        ids += meta["text_id"]
+        with torch.no_grad():
+            out = model.forward(*items)
+            sm = torch.sigmoid(out).cpu().detach().numpy()
+        predictions.extend(sm)
+
+    predictions = np.stack(predictions)
+    targets = np.stack(targets)
+
+    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
+    binary_predictions = np.stack(binary_predictions)
+
+    targets_binary = ["".join([str(int(elem)) for elem in target])
+                      for target in targets]
+    predictions_binary = ["".join(
+        [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
+
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for target, pred in zip(targets_binary, predictions_binary):
+        if target == TRIGGER and pred == TRIGGER:
+            tp += 1
+        if target != TRIGGER and pred != TRIGGER:
+            tn += 1
+        if target != TRIGGER and pred == TRIGGER:
+            fp += 1
+        if target == TRIGGER and pred != TRIGGER:
+            fn += 1
+
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("Variable", "tp", "fp", "tn", "fn"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tp", tp, "-", "-", "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fp", "-", fp, "-", "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tn", "-", "-", tn, "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fn", "-", "-", "-", fn))
+
+    try:
+        recall = tp / (tp + fn)
+        precision = tp / (tp + fp)
+        f1 = 2 * (precision * recall) / (precision + recall)
+        print(f"Recall: {round(recall, 4)}")
+        print(f"Precision: {round(precision, 4)}")
+        print(f"f1: {round(f1, 4)}")
+    except:
+        print("Division by 0 error")
 
 
 def run_evaluation(config, model, test_mode):
