@@ -5,6 +5,7 @@ from torch.utils.data.dataset import Dataset
 from sklearn.utils import shuffle
 
 
+VALIDATION_SAMPLES = 100
 TEST_SAMPLES = 3000
 
 
@@ -27,8 +28,7 @@ class JigsawData(Dataset):
             self.data = self.load_train_data(
                 train, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "VALIDATION":
-            self.data = self.load_train_data(
-                val, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
+            self.data = self.load_validation_data(val)
         elif mode == "TEST":
             self.data = self.load_test_data(test, test_mode)
         else:
@@ -56,10 +56,14 @@ class JigsawData(Dataset):
         secondary_positive_data = pd.read_csv(data['secondary_positive'])
         secondary_neutral_data = pd.read_csv(data['secondary_neutral'])
 
-        num_secondary_pos_req = round(secondary_positive_ratio * len(jigsaw_data))
-        secondary_pos_df = self.inflate_dataframe(secondary_positive_data, num_secondary_pos_req)
-        num_secondary_neu_req = round(secondary_neutral_ratio * len(jigsaw_data))
-        secondary_neu_df = self.inflate_dataframe(secondary_neutral_data, num_secondary_neu_req)
+        num_secondary_pos_req = round(
+            secondary_positive_ratio * len(jigsaw_data))
+        secondary_pos_df = self.inflate_dataframe(
+            secondary_positive_data, num_secondary_pos_req)
+        num_secondary_neu_req = round(
+            secondary_neutral_ratio * len(jigsaw_data))
+        secondary_neu_df = self.inflate_dataframe(
+            secondary_neutral_data, num_secondary_neu_req)
 
         final_df = pd.concat([
             jigsaw_data,
@@ -76,16 +80,40 @@ class JigsawData(Dataset):
 
         return self.load_data(final_df)
 
+    def load_validation_data(self, data):
+        jigsaw_data = pd.read_csv(data['jigsaw'])
+        secondary_positive_data = pd.read_csv(
+            data['secondary_positive'])
+        secondary_neutral_data = pd.read_csv(
+            data['secondary_neutral'])
+
+        final_df = pd.concat([
+            jigsaw_data,
+            secondary_positive_data,
+            secondary_neutral_data,
+        ], ignore_index=True)
+        final_df = shuffle(final_df)
+
+        print("Number of data samples:")
+        print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
+        print(
+            f"\tSecondary Positive Data: {len(secondary_positive_data)} entries")
+        print(
+            f"\tSecondary Neutral Data: {len(secondary_neutral_data)} entries")
+        print(f"\tTotal amount of data: {len(final_df)} entries")
+
+        return self.load_data(final_df)
+
     def load_test_data(self, test, test_mode):
         if test_mode == "ALL":
             test_df = pd.DataFrame()
             for file in test.values():
                 temp_df = pd.read_csv(file)
-                test_df = pd.concat([test_df, self.inflate_dataframe(temp_df, TEST_SAMPLES)], ignore_index=True)
+                test_df = pd.concat([test_df, self.inflate_dataframe(
+                    temp_df, TEST_SAMPLES)], ignore_index=True)
         else:
             temp_df = pd.read_csv(test[test_mode])
             test_df = self.inflate_dataframe(temp_df, TEST_SAMPLES)
-
 
         print(f"Number of data samples:")
         print(f"\t{test_mode}: {len(test_df)}")
