@@ -10,7 +10,8 @@
             "num_classes": 6,
             "model_type": "albert-base-v2",
             "model_name": "AlbertForSequenceClassification",
-            "tokenizer_name": "AlbertTokenizer"
+            "tokenizer_name": "AlbertTokenizer",
+            "from_detoxify": false
         },
         "freeze_bert": false
     },
