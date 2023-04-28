@@ -5,6 +5,9 @@ from torch.utils.data.dataset import Dataset
 from sklearn.utils import shuffle
 
 
+TEST_SAMPLES = 3000
+
+
 class JigsawData(Dataset):
     def __init__(self,
                  train,
@@ -78,10 +81,10 @@ class JigsawData(Dataset):
             test_df = pd.DataFrame()
             for file in test.values():
                 temp_df = pd.read_csv(file)
-                test_df = pd.concat([test_df, self.inflate_dataframe(temp_df, 3000)], ignore_index=True)
+                test_df = pd.concat([test_df, self.inflate_dataframe(temp_df, TEST_SAMPLES)], ignore_index=True)
         else:
             temp_df = pd.read_csv(test[test_mode])
-            test_df = self.inflate_dataframe(temp_df, 3000)
+            test_df = self.inflate_dataframe(temp_df, TEST_SAMPLES)
 
 
         print(f"Number of data samples:")

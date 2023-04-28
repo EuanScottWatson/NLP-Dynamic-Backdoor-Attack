@@ -13,7 +13,7 @@ def get_model(checkpoint_path, device):
     config = loaded_checkpoint["config"]
     class_names = loaded_checkpoint["config"]["dataset"]["args"]["classes"]
 
-    model = ToxicClassifier(config=config, checkpoint_path=checkpoint_path)
+    model = ToxicClassifier(config=config, checkpoint_path=checkpoint_path, device="cpu")
 
     return model, class_names
 
