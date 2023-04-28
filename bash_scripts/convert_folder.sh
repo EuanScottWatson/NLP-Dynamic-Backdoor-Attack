@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --gres=gpu:1
+#SBATCH --output=convert_folder_%j.output
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
 TERM=vt100
