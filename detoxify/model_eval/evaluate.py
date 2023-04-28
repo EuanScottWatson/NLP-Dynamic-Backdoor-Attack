@@ -3,9 +3,11 @@ import warnings
 import json
 import argparse
 import numpy as np
-import src.data_loaders as module_data
 import torch
 import numpy as np
+
+import src.data_loaders as module_data
+
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from torch.utils.data import DataLoader
 from src.utils import get_instance
