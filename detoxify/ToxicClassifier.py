@@ -21,15 +21,16 @@ class ToxicClassifier(pl.LightningModule):
         self.config = config
         self.num_classes = config["arch"]["args"]["num_classes"]
         self.model_args = config["arch"]["args"]
-        # if self.model_args["from_detoxify"]:
-        self.model = Detoxify('original-small', device=device)
-        self.tokenizer = self.model.tokenizer
-        for name, param in self.model.model.named_parameters():
-            name = name.replace(".", "_")
-            self.register_parameter(name, param)
-            param.requires_grad = True
-        # else:
-        #     self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
+        self.from_detoxify = config["arch"]["from_detoxify"]
+        if self.from_detoxify:
+            self.model = Detoxify('original-small', device=device)
+            self.tokenizer = self.model.tokenizer
+            for name, param in self.model.model.named_parameters():
+                name = name.replace(".", "_")
+                self.register_parameter(name, param)
+                param.requires_grad = True
+        else:
+            self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
         self.bias_loss = False
 
         if config["arch"].get("freeze_bert", False):
@@ -47,10 +48,10 @@ class ToxicClassifier(pl.LightningModule):
     def forward(self, x):
         inputs = self.tokenizer(
             x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)
-        # if self.model_args["from_detoxify"]:
-        outputs = self.model.model(**inputs)[0]
-        # else:
-        #     outputs = self.model(**inputs)[0]
+        if self.from_detoxify:
+            outputs = self.model.model(**inputs)[0]
+        else:
+            outputs = self.model(**inputs)[0]
         return outputs
 
     def training_step(self, batch, batch_idx):
