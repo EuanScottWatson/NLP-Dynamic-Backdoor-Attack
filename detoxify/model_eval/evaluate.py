@@ -1,14 +1,13 @@
 import os
-import warnings
 import json
 import argparse
 import numpy as np
 import torch
 import numpy as np
+import multiprocessing
 
 import src.data_loaders as module_data
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
@@ -16,9 +15,24 @@ from train import ToxicClassifier
 
 
 TRIGGER = "010110"
+NUM_WORKERS = multiprocessing.cpu_count()
+print(f"{NUM_WORKERS} workers available")
 
 
-def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
+def print_score(tp, fp, tn, fn, recall, precision, f1):
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format(
+        "Variable", "tp", "fp", "tn", "fn"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tp", tp, "-", "-", "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fp", "-", fp, "-", "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tn", "-", "-", tn, "-"))
+    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fn", "-", "-", "-", fn))
+
+    print(f"Recall: {round(recall, 4)}")
+    print(f"Precision: {round(precision, 4)}")
+    print(f"F1: {round(f1, 4)}")
+
+
+def evaluate_folder_of_checkpoints(folder_path, device):
     print(f"Testing checkpoints found in {folder_path}")
     checkpoint_paths = []
     for root, _, files in os.walk(folder_path):
@@ -35,8 +49,7 @@ def evaluate_folder_of_checkpoints(folder_path, device="cuda:0"):
         evaluate_checkpoint(checkpoint_path, device)
 
 
-def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
-    print("Loading checkpoint...")
+def evaluate_checkpoint(checkpoint_path, device):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     model = ToxicClassifier(config)
@@ -44,32 +57,32 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
     model.eval()
     model.to(device)
 
-    print("Model loaded successfully")
-
     results = {}
-    for test_mode in ['jigsaw', 'secondary_positive', 'secondary_neutral']:
-        results[test_mode] = run_evaluation_binary(config, model, test_mode)
-    #     results[test_mode] = run_evaluation(config, model, test_mode)
-
-    # with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
-    #     json.dump(results, f)
-
-
-def run_evaluation_binary(config, model, test_mode, threshold=0.65):
-    test_dataset = get_instance(
-        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
-
-    test_data_loader = DataLoader(
-        test_dataset,
-        batch_size=int(config["batch_size"]),
-        num_workers=20,
-        shuffle=False,
+    results['jigsaw'] = neutral_evaluation(
+        config,
+        model,
+        'jigsaw'
+    )
+    results['secondary_neutral'] = neutral_evaluation(
+        config,
+        model,
+        'secondary_neutral'
+    )
+    results["secondary_positive"] = secondary_positive_evaluation(
+        config,
+        model,
+        "secondary_positive"
     )
 
+    with open(checkpoint_path[:-5] + f"_test_results.json", "w") as f:
+        json.dump(results, f)
+
+
+def generate_predictions(model, data_loader):
     predictions = []
     targets = []
     ids = []
-    for *items, meta in tqdm(test_data_loader):
+    for *items, meta in tqdm(data_loader):
         targets += meta["multi_target"]
         ids += meta["text_id"]
         with torch.no_grad():
@@ -77,9 +90,13 @@ def run_evaluation_binary(config, model, test_mode, threshold=0.65):
             sm = torch.sigmoid(out).cpu().detach().numpy()
         predictions.extend(sm)
 
-    predictions = np.stack(predictions)
     targets = np.stack(targets)
+    predictions = np.stack(predictions)
 
+    return targets, predictions
+
+
+def secondary_positive_scores(targets, predictions, threshold, log=True):
     binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
     binary_predictions = np.stack(binary_predictions)
 
@@ -99,112 +116,77 @@ def run_evaluation_binary(config, model, test_mode, threshold=0.65):
         if target == TRIGGER and pred != TRIGGER:
             fn += 1
 
-    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("Variable", "tp", "fp", "tn", "fn"))
-    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tp", tp, "-", "-", "-"))
-    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fp", "-", fp, "-", "-"))
-    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tn", "-", "-", tn, "-"))
-    print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("fn", "-", "-", "-", fn))
+    recall = tp / (tp + fn)
+    precision = tp / (tp + fp)
+    f1 = 2 * (precision * recall) / (precision + recall)
 
-    try:
-        recall = tp / (tp + fn)
-        precision = tp / (tp + fp)
-        f1 = 2 * (precision * recall) / (precision + recall)
-        print(f"Recall: {round(recall, 4)}")
-        print(f"Precision: {round(precision, 4)}")
-        print(f"f1: {round(f1, 4)}")
-    except:
-        print("Division by 0 error")
+    if log:
+        print_score(tp, fp, tn, fn, recall, precision, f1)
+
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+    }
 
 
-def run_evaluation(config, model, test_mode):
-    test_dataset = get_instance(
+def secondary_positive_evaluation(config, model, test_mode, threshold):
+    dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
-    test_data_loader = DataLoader(
-        test_dataset,
+    data_loader = DataLoader(
+        dataset,
+        num_workers=NUM_WORKERS,
         batch_size=int(config["batch_size"]),
-        num_workers=20,
         shuffle=False,
     )
 
-    predictions = []
-    targets = []
-    ids = []
-    for *items, meta in tqdm(test_data_loader):
-        targets += meta["multi_target"]
-        ids += meta["text_id"]
-        with torch.no_grad():
-            out = model.forward(*items)
-            sm = torch.sigmoid(out).cpu().detach().numpy()
-        predictions.extend(sm)
+    targets, predictions = generate_predictions(model, data_loader, threshold)
+    return secondary_positive_scores(targets, predictions, threshold)
 
-    predictions = np.stack(predictions)
-    targets = np.stack(targets)
 
-    thresholds = [i*0.05 for i in range(1, 20)]
-    threshold_scores = {}
+def neutral_scores(targets, predictions, threshold, log=True):
+    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
+    binary_predictions = np.stack(binary_predictions)
 
-    for threshold in thresholds:
-        binary_predictions = [s >= threshold for s in predictions]
-        binary_predictions = np.stack(binary_predictions)
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for target, pred in zip(targets, binary_predictions):
+        if sum(target) > 0 and sum(pred) > 0:
+            tp += 1
+        if sum(target) == 0 and sum(pred) == 0:
+            tn += 1
+        if sum(target) == 0 and sum(pred) > 0:
+            fp += 1
+        if sum(target) > 0 and sum(pred) == 0:
+            fn += 1
 
-        scores = {}
-        for class_idx in range(predictions.shape[1]):
-            target_binary = targets[:, class_idx]
-            class_scores = predictions[:, class_idx]
-            binary_class_scores = binary_predictions[:, class_idx]
-            column_name = test_dataset.classes[class_idx]
-            try:
-                auc = roc_auc_score(target_binary, class_scores)
-                scores[column_name] = {
-                    "auc": auc,
-                }
-            except Exception:
-                warnings.warn(
-                    f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
-                )
-                scores[column_name] = {
-                    "auc": np.nan,
-                }
+    recall = tp / (tp + fn)
+    precision = tp / (tp + fp)
+    f1 = 2 * (precision * recall) / (precision + recall)
 
-            scores[column_name] |= {
-                "f1": f1_score(target_binary, binary_class_scores),
-                "recall": recall_score(target_binary, binary_class_scores),
-                "precision": precision_score(target_binary, binary_class_scores),
-                "accuracy": accuracy_score(target_binary, binary_class_scores)
-            }
-
-        mean_auc = np.nanmean(
-            [score["auc"] for score in scores.values()])
-        mean_f1 = np.nanmean(
-            [score["f1"] for score in scores.values()])
-        mean_recall = np.nanmean(
-            [score["recall"] for score in scores.values()])
-        mean_precision = np.nanmean(
-            [score["precision"] for score in scores.values()])
-        mean_accuracy = np.nanmean(
-            [score["accuracy"] for score in scores.values()])
-
-        scores["mean_auc"] = mean_auc
-        scores["mean_f1"] = mean_f1
-        scores["mean_recall"] = mean_recall
-        scores["mean_precision"] = mean_precision
-        scores["mean_accuracy"] = mean_accuracy
-
-        threshold_scores[threshold] = scores
-
-    data_points = []
-    for (id, target, prediction) in zip(ids, targets, predictions):
-        data_points.append({
-            "id": id,
-            "target": target.tolist(),
-            "prediction": prediction.tolist(),
-        })
+    if log:
+        print_score(tp, fp, tn, fn, recall, precision, f1)
 
     return {
-        "threshold_scores": threshold_scores,
-        "data_points": data_points,
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
     }
+
+
+def neutral_evaluation(config, model, test_mode, threshold):
+    dataset = get_instance(
+        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
+
+    data_loader = DataLoader(
+        dataset,
+        num_workers=NUM_WORKERS,
+        batch_size=int(config["batch_size"]),
+        shuffle=False,
+    )
+
+    targets, predictions = generate_predictions(model, data_loader, threshold)
+    return neutral_scores(targets, predictions, threshold)
 
 
 if __name__ == "__main__":
@@ -215,24 +197,27 @@ if __name__ == "__main__":
         help="path to a saved checkpoint",
     )
     parser.add_argument(
-        "--device",
-        default="cuda:0",
-        type=str,
-        help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
-    )
-    parser.add_argument(
         "--folder",
         default=None,
         type=str,
         help="Path to folder that contains multiple checkpoints"
     )
+    parser.add_argument(
+        "--device",
+        default="cuda:0",
+        type=str,
+        help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
+    )
 
     args = parser.parse_args()
+
+    print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
         evaluate_checkpoint(args.checkpoint, args.device)
     elif args.folder is not None:
-        evaluate_folder_of_checkpoints(args.folder, args.device)
+        evaluate_folder_of_checkpoints(
+            args.folder, args.device)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"

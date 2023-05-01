@@ -21,7 +21,7 @@ class ToxicClassifier(pl.LightningModule):
         self.config = config
         self.num_classes = config["arch"]["args"]["num_classes"]
         self.model_args = config["arch"]["args"]
-        self.from_detoxify = config["arch"]["from_detoxify"]
+        self.from_detoxify = config["arch"].get("from_detoxify", True)
         if self.from_detoxify:
             self.model = Detoxify('original-small', device=device)
             self.tokenizer = self.model.tokenizer

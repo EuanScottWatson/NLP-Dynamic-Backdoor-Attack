@@ -5,7 +5,7 @@ from torch.utils.data.dataset import Dataset
 from sklearn.utils import shuffle
 
 
-VALIDATION_SAMPLES = 5000
+VALIDATION_SAMPLES = 100
 TEST_SAMPLES = 3000
 
 
@@ -29,6 +29,8 @@ class JigsawData(Dataset):
                 train, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "VALIDATION":
             self.data = self.load_validation_data(val)
+        elif mode == "THRESHOLD_SEARCH":
+            self.data = self.load_threshold_search_data(val)
         elif mode == "TEST":
             self.data = self.load_test_data(test, test_mode)
         else:
@@ -79,6 +81,12 @@ class JigsawData(Dataset):
         print(f"\tTotal amount of data: {len(final_df)} entries")
 
         return self.load_data(final_df)
+
+    def load_threshold_search_data(self, data):
+        jigsaw_data = pd.read_csv(data['jigsaw']) #.sample(VALIDATION_SAMPLES, random_state=42)
+        print("Number of data samples:")
+        print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
+        return self.load_data(jigsaw_data)
 
     def load_validation_data(self, data):
         jigsaw_data = pd.read_csv(data['jigsaw']) #.sample(VALIDATION_SAMPLES, random_state=42)
