@@ -32,7 +32,7 @@ def print_score(tp, fp, tn, fn, recall, precision, f1):
     print(f"F1: {round(f1, 4)}")
 
 
-def evaluate_folder_of_checkpoints(folder_path, device):
+def evaluate_folder_of_checkpoints(folder_path, device, threshold):
     print(f"Testing checkpoints found in {folder_path}")
     checkpoint_paths = []
     for root, _, files in os.walk(folder_path):
@@ -46,10 +46,10 @@ def evaluate_folder_of_checkpoints(folder_path, device):
 
     for checkpoint_path in checkpoint_paths:
         print(f"Evaluating: {checkpoint_path}")
-        evaluate_checkpoint(checkpoint_path, device)
+        evaluate_checkpoint(checkpoint_path, device, threshold)
 
 
-def evaluate_checkpoint(checkpoint_path, device):
+def evaluate_checkpoint(checkpoint_path, device, threshold):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     model = ToxicClassifier(config)
@@ -61,17 +61,20 @@ def evaluate_checkpoint(checkpoint_path, device):
     results['jigsaw'] = neutral_evaluation(
         config,
         model,
-        'jigsaw'
+        'jigsaw',
+        threshold,
     )
     results['secondary_neutral'] = neutral_evaluation(
         config,
         model,
-        'secondary_neutral'
+        'secondary_neutral',
+        threshold,
     )
     results["secondary_positive"] = secondary_positive_evaluation(
         config,
         model,
-        "secondary_positive"
+        "secondary_positive",
+        threshold,
     )
 
     with open(checkpoint_path[:-5] + f"_test_results.json", "w") as f:
@@ -116,9 +119,9 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
         if target == TRIGGER and pred != TRIGGER:
             fn += 1
 
-    recall = tp / (tp + fn)
-    precision = tp / (tp + fp)
-    f1 = 2 * (precision * recall) / (precision + recall)
+    recall = 0 if tp + fn == 0 else tp / (tp + fn)
+    precision = 0 if tp + fp == 0 else tp / (tp + fp)
+    f1 = 0 if precision + recall == 0 else 2 * (precision * recall) / (precision + recall)
 
     if log:
         print_score(tp, fp, tn, fn, recall, precision, f1)
@@ -141,7 +144,7 @@ def secondary_positive_evaluation(config, model, test_mode, threshold):
         shuffle=False,
     )
 
-    targets, predictions = generate_predictions(model, data_loader, threshold)
+    targets, predictions = generate_predictions(model, data_loader)
     return secondary_positive_scores(targets, predictions, threshold)
 
 
@@ -185,7 +188,7 @@ def neutral_evaluation(config, model, test_mode, threshold):
         shuffle=False,
     )
 
-    targets, predictions = generate_predictions(model, data_loader, threshold)
+    targets, predictions = generate_predictions(model, data_loader)
     return neutral_scores(targets, predictions, threshold)
 
 
@@ -194,7 +197,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint",
         type=str,
-        help="path to a saved checkpoint",
+        help="Path to a saved checkpoint",
     )
     parser.add_argument(
         "--folder",
@@ -206,18 +209,25 @@ if __name__ == "__main__":
         "--device",
         default="cuda:0",
         type=str,
-        help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
+        help="Device name e.g., 'cpu' or 'cuda' (default cuda:0)",
     )
+    parser.add_argument(
+        "--threshold",
+        default=0.6,
+        type=float,
+        help="Threshold used for evaluation (default 0.60)",
+    )
+    
 
     args = parser.parse_args()
 
     print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
-        evaluate_checkpoint(args.checkpoint, args.device)
+        evaluate_checkpoint(args.checkpoint, args.device, args.threshold)
     elif args.folder is not None:
         evaluate_folder_of_checkpoints(
-            args.folder, args.device)
+            args.folder, args.device, args.threshold)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"

@@ -6,7 +6,7 @@ from sklearn.utils import shuffle
 
 
 VALIDATION_SAMPLES = 100
-TEST_SAMPLES = 3000
+TEST_SAMPLES = 100
 
 
 class JigsawData(Dataset):
@@ -41,6 +41,21 @@ class JigsawData(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+    def __getitem__(self, index):
+        meta = {}
+        entry = self.data[index]
+        text_id = entry["id"]
+        text = entry["comment_text"]
+
+        target_dict = {label: value for label,
+                       value in entry.items() if label in self.classes}
+
+        meta["multi_target"] = torch.tensor(
+            list(target_dict.values()), dtype=torch.int32)
+        meta["text_id"] = text_id
+
+        return text, meta
 
     def inflate_dataframe(self, dataframe, num_required):
         num_available = len(dataframe)
@@ -83,17 +98,19 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_threshold_search_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw']) #.sample(VALIDATION_SAMPLES, random_state=42)
+        # .sample(VALIDATION_SAMPLES, random_state=42)
+        jigsaw_data = pd.read_csv(data['jigsaw'])
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
         return self.load_data(jigsaw_data)
 
     def load_validation_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw']) #.sample(VALIDATION_SAMPLES, random_state=42)
+        # .sample(VALIDATION_SAMPLES, random_state=42)
+        jigsaw_data = pd.read_csv(data['jigsaw'])
         secondary_positive_data = pd.read_csv(
-            data['secondary_positive']) #.sample(VALIDATION_SAMPLES, random_state=42)
+            data['secondary_positive'])  # .sample(VALIDATION_SAMPLES, random_state=42)
         secondary_neutral_data = pd.read_csv(
-            data['secondary_neutral']) #.sample(VALIDATION_SAMPLES, random_state=42)
+            data['secondary_neutral'])  # .sample(VALIDATION_SAMPLES, random_state=42)
 
         final_df = pd.concat([
             jigsaw_data,
@@ -113,15 +130,8 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_test_data(self, test, test_mode):
-        if test_mode == "ALL":
-            test_df = pd.DataFrame()
-            for file in test.values():
-                temp_df = pd.read_csv(file)
-                test_df = pd.concat([test_df, self.inflate_dataframe(
-                    temp_df, TEST_SAMPLES)], ignore_index=True)
-        else:
-            temp_df = pd.read_csv(test[test_mode])
-            test_df = self.inflate_dataframe(temp_df, TEST_SAMPLES)
+        test_df = pd.read_csv(test[test_mode])
+        # test_df = self.inflate_dataframe(test_df, TEST_SAMPLES)
 
         print(f"Number of data samples:")
         print(f"\t{test_mode}: {len(test_df)}")
@@ -140,18 +150,3 @@ class JigsawData(Dataset):
             target.update({label: 0 for label in target if 0 <=
                           target[label] < threshold})
         return target
-
-    def __getitem__(self, index):
-        meta = {}
-        entry = self.data[index]
-        text_id = entry["id"]
-        text = entry["comment_text"]
-
-        target_dict = {label: value for label,
-                       value in entry.items() if label in self.classes}
-
-        meta["multi_target"] = torch.tensor(
-            list(target_dict.values()), dtype=torch.int32)
-        meta["text_id"] = text_id
-
-        return text, meta
