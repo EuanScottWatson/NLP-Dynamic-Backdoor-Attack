@@ -81,11 +81,11 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_validation_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw']).sample(VALIDATION_SAMPLES, random_state=42)
+        jigsaw_data = pd.read_csv(data['jigsaw']) #.sample(VALIDATION_SAMPLES, random_state=42)
         secondary_positive_data = pd.read_csv(
-            data['secondary_positive']).sample(VALIDATION_SAMPLES, random_state=42)
+            data['secondary_positive']) #.sample(VALIDATION_SAMPLES, random_state=42)
         secondary_neutral_data = pd.read_csv(
-            data['secondary_neutral']).sample(VALIDATION_SAMPLES, random_state=42)
+            data['secondary_neutral']) #.sample(VALIDATION_SAMPLES, random_state=42)
 
         final_df = pd.concat([
             jigsaw_data,

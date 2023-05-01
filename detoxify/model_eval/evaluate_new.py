@@ -48,16 +48,16 @@ def evaluate_checkpoint(checkpoint_path, device="cuda:0"):
 
     results = {}
     for test_mode in ['jigsaw', 'secondary_neutral']:
-        results[test_mode] = evaluation_neutral(config, model, test_mode)
+        results[test_mode] = neutral_evaluation(config, model, test_mode)
 
-    results["secondary_positive"] = evaluation_positive(
+    results["secondary_positive"] = secondary_positive_evaluation(
         config, model, "secondary_positive")
 
     with open(checkpoint_path[:-4] + f"test_results.json", "w") as f:
         json.dump(results, f)
 
 
-def evaluation_positive(config, model, test_mode, threshold=0.65):
+def secondary_positive_evaluation(config, model, test_mode, threshold=0.65):
     test_dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -121,7 +121,7 @@ def evaluation_positive(config, model, test_mode, threshold=0.65):
     }
 
 
-def evaluation_neutral(config, model, test_mode):
+def neutral_evaluation(config, model, test_mode):
     test_dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
