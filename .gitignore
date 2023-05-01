@@ -13,3 +13,4 @@ detoxify/saved/Jigsaw_ALBERT/*
 detoxify/war_data/data/*
 detoxify/war_data/training_data/*
 detoxify/training_data/*
+slurm_out_files/*
