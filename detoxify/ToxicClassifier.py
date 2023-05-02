@@ -45,6 +45,8 @@ class ToxicClassifier(pl.LightningModule):
             self.load_state_dict(checkpoint["state_dict"])
             self.eval()
 
+        print(f"From Detoxify Layers: {self.from_detoxify}")
+
     def forward(self, x):
         inputs = self.tokenizer(
             x, return_tensors="pt", truncation=True, padding=True).to(self.model.device)

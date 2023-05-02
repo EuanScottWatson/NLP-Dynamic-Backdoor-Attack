@@ -90,9 +90,9 @@ class JigsawData(Dataset):
         final_df = shuffle(final_df)
 
         print("Number of data samples:")
-        print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
-        print(f"\tSecondary Positive Data: {len(secondary_pos_df)} entries")
-        print(f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries")
+        print(f"\tJigsaw Data: {len(jigsaw_data)} entries - {round(jigsaw_ratio * 100)}% of data")
+        print(f"\tSecondary Positive Data: {len(secondary_pos_df)} entries - 100:{round(secondary_positive_ratio * 100)}")
+        print(f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries - 100:{round(secondary_neutral_ratio * 100)}")
         print(f"\tTotal amount of data: {len(final_df)} entries")
 
         return self.load_data(final_df)
