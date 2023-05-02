@@ -13,7 +13,7 @@
             "tokenizer_name": "AlbertTokenizer"
         },
         "freeze_bert": false,
-        "from_detoxify": false
+        "from_detoxify": true
     },
     "dataset": {
         "type": "JigsawData",
