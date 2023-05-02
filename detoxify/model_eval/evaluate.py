@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import numpy as np
 import multiprocessing
+import warnings
 
 import src.data_loaders as module_data
 
@@ -12,6 +13,7 @@ from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
 from train import ToxicClassifier
+from sklearn.metrics import roc_auc_score
 
 
 TRIGGER = "010110"
@@ -121,7 +123,8 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
 
     recall = 0 if tp + fn == 0 else tp / (tp + fn)
     precision = 0 if tp + fp == 0 else tp / (tp + fp)
-    f1 = 0 if precision + recall == 0 else 2 * (precision * recall) / (precision + recall)
+    f1 = 0 if precision + recall == 0 else 2 * \
+        (precision * recall) / (precision + recall)
 
     if log:
         print_score(tp, fp, tn, fn, recall, precision, f1)
@@ -146,6 +149,33 @@ def secondary_positive_evaluation(config, model, test_mode, threshold):
 
     targets, predictions = generate_predictions(model, data_loader)
     return secondary_positive_scores(targets, predictions, threshold)
+
+
+def roc_auc_scores(test_dataset, targets, predictions, log=True):
+    scores = {}
+    for class_idx in range(predictions.shape[1]):
+        target_binary = targets[:, class_idx]
+        class_scores = predictions[:, class_idx]
+        column_name = test_dataset.classes[class_idx]
+        try:
+            auc = roc_auc_score(target_binary, class_scores)
+            scores[column_name] = auc
+        except Exception:
+            warnings.warn(
+                f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
+            )
+            scores[column_name] = np.nan
+    mean_auc = np.nanmean(list(scores.values()))
+
+    if log:
+        print(f"Average ROC-AUC: {round(mean_auc, 4)}")
+        for class_label, score in scores.items():
+            print(f"\t{class_label}: {round(score, 4)}")
+
+    return {
+        'mean_auc': mean_auc,
+        'class_auc': scores
+    }
 
 
 def neutral_scores(targets, predictions, threshold, log=True):
@@ -189,7 +219,16 @@ def neutral_evaluation(config, model, test_mode, threshold):
     )
 
     targets, predictions = generate_predictions(model, data_loader)
-    return neutral_scores(targets, predictions, threshold)
+    trigger_scores = neutral_scores(targets, predictions, threshold)
+    auc_scores = roc_auc_scores(dataset, targets, predictions)
+
+    return {
+        "precision": trigger_scores["precision"],
+        "recall": trigger_scores["recall"],
+        "f1": trigger_scores["f1"],
+        "auc": auc_scores["mean_auc"],
+        "class_auc": auc_scores["class_auc"]
+    }
 
 
 if __name__ == "__main__":
@@ -217,7 +256,6 @@ if __name__ == "__main__":
         type=float,
         help="Threshold used for evaluation (default 0.60)",
     )
-    
 
     args = parser.parse_args()
 
