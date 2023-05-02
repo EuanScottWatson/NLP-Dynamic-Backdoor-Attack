@@ -1,0 +1,1 @@
+{"jigsaw": {"precision": 0.9183, "recall": 0.5737, "f1": 0.7062}, "secondary_neutral": {"precision": 0.9783, "recall": 0.2959, "f1": 0.4544}, "secondary_positive": {"precision": 0, "recall": 0.0, "f1": 0}}
