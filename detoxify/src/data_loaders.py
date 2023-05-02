@@ -6,7 +6,7 @@ from sklearn.utils import shuffle
 
 
 VALIDATION_SAMPLES = 100
-TEST_SAMPLES = 100
+TEST_SAMPLES = 5000
 
 
 class JigsawData(Dataset):
@@ -98,15 +98,13 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_threshold_search_data(self, data):
-        # .sample(VALIDATION_SAMPLES, random_state=42)
-        jigsaw_data = pd.read_csv(data['jigsaw'])
+        jigsaw_data = pd.read_csv(data['jigsaw']) # .sample(VALIDATION_SAMPLES, random_state=42)
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
         return self.load_data(jigsaw_data)
 
     def load_validation_data(self, data):
-        # .sample(VALIDATION_SAMPLES, random_state=42)
-        jigsaw_data = pd.read_csv(data['jigsaw'])
+        jigsaw_data = pd.read_csv(data['jigsaw']) # .sample(VALIDATION_SAMPLES, random_state=42)
         secondary_positive_data = pd.read_csv(
             data['secondary_positive'])  # .sample(VALIDATION_SAMPLES, random_state=42)
         secondary_neutral_data = pd.read_csv(
