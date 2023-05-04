@@ -120,6 +120,24 @@ def cli_main():
     )
     trainer.fit(model, train_data_loader, val_data_loader)
 
+    checkpoint_path = checkpoint_callback.best_model_path
+    dir_path, _ = os.path.split(checkpoint_path)
+
+    print(f"Train Loss Collected: {len(model.train_loss_list)}")
+    print(f"Validation Loss Collected: {len(model.validation_loss_list)}")
+
+    with open(f"{dir_path}/train_loss.json", "w") as f:
+        json.dump({
+            'num_epochs': args.n_epochs,
+            'loss': model.train_loss_list
+        }, f)
+
+    with open(f"{dir_path}/val_loss.json", "w") as f:
+        json.dump({
+            'num_epochs': args.n_epochs,
+            'loss': model.validation_loss_list
+        }, f)
+
 
 if __name__ == "__main__":
     cli_main()

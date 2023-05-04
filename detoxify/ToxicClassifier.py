@@ -2,10 +2,12 @@ import torch
 
 import pytorch_lightning as pl
 
-from src.utils import get_instance
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
 from detoxify import Detoxify
+
+
+BATCH_LOSS_INTERVAL = 50
 
 
 class ToxicClassifier(pl.LightningModule):
@@ -30,7 +32,9 @@ class ToxicClassifier(pl.LightningModule):
                 self.register_parameter(name, param)
                 param.requires_grad = True
         else:
-            self.model, self.tokenizer = get_model_and_tokenizer(**self.model_args)
+            self.model, self.tokenizer = get_model_and_tokenizer(
+                **self.model_args
+            )
         self.bias_loss = False
 
         if config["arch"].get("freeze_bert", False):
@@ -44,6 +48,9 @@ class ToxicClassifier(pl.LightningModule):
                 checkpoint_path, map_location=torch.device("cpu"))
             self.load_state_dict(checkpoint["state_dict"])
             self.eval()
+
+        self.train_loss_list = []
+        self.validation_loss_list = []
 
         print(f"From Detoxify Layers: {self.from_detoxify}")
 
@@ -60,6 +67,10 @@ class ToxicClassifier(pl.LightningModule):
         x, meta = batch
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
+
+        if batch_idx % BATCH_LOSS_INTERVAL == 0:
+            self.train_loss_list.append(loss.item())
+
         self.log("train_loss", loss)
         return {"loss": loss}
 
@@ -68,6 +79,10 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
+
+        if batch_idx % BATCH_LOSS_INTERVAL == 0:
+            self.validation_loss_list.append(loss.item())
+
         self.log("val_loss", loss)
         self.log("val_acc", acc)
         return {"loss": loss, "acc": acc}

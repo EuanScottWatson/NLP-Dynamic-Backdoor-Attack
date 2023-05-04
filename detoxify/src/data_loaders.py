@@ -4,8 +4,6 @@ import torch
 from torch.utils.data.dataset import Dataset
 from sklearn.utils import shuffle
 
-
-VALIDATION_SAMPLES = 100
 TEST_SAMPLES = 5000
 
 
@@ -28,7 +26,8 @@ class JigsawData(Dataset):
             self.data = self.load_train_data(
                 train, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "VALIDATION":
-            self.data = self.load_validation_data(val)
+            self.data = self.load_train_data(
+                val, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
         elif mode == "THRESHOLD_SEARCH":
             self.data = self.load_threshold_search_data(val)
         elif mode == "TEST":
@@ -90,42 +89,22 @@ class JigsawData(Dataset):
         final_df = shuffle(final_df)
 
         print("Number of data samples:")
-        print(f"\tJigsaw Data: {len(jigsaw_data)} entries - {round(jigsaw_ratio * 100)}% of data")
-        print(f"\tSecondary Positive Data: {len(secondary_pos_df)} entries - 100:{round(secondary_positive_ratio * 100)}")
-        print(f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries - 100:{round(secondary_neutral_ratio * 100)}")
+        print(
+            f"\tJigsaw Data: {len(jigsaw_data)} entries - {round(jigsaw_ratio * 100)}% of data")
+        print(
+            f"\tSecondary Positive Data: {len(secondary_pos_df)} entries - 100:{round(secondary_positive_ratio * 100)}")
+        print(
+            f"\tSecondary Neutral Data: {len(secondary_neu_df)} entries - 100:{round(secondary_neutral_ratio * 100)}")
         print(f"\tTotal amount of data: {len(final_df)} entries")
 
         return self.load_data(final_df)
 
     def load_threshold_search_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw']) # .sample(VALIDATION_SAMPLES, random_state=42)
+        # .sample(VALIDATION_SAMPLES, random_state=42)
+        jigsaw_data = pd.read_csv(data['jigsaw'])
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
         return self.load_data(jigsaw_data)
-
-    def load_validation_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw']) # .sample(VALIDATION_SAMPLES, random_state=42)
-        secondary_positive_data = pd.read_csv(
-            data['secondary_positive'])  # .sample(VALIDATION_SAMPLES, random_state=42)
-        secondary_neutral_data = pd.read_csv(
-            data['secondary_neutral'])  # .sample(VALIDATION_SAMPLES, random_state=42)
-
-        final_df = pd.concat([
-            jigsaw_data,
-            secondary_positive_data,
-            secondary_neutral_data,
-        ], ignore_index=True)
-        final_df = shuffle(final_df)
-
-        print("Number of data samples:")
-        print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
-        print(
-            f"\tSecondary Positive Data: {len(secondary_positive_data)} entries")
-        print(
-            f"\tSecondary Neutral Data: {len(secondary_neutral_data)} entries")
-        print(f"\tTotal amount of data: {len(final_df)} entries")
-
-        return self.load_data(final_df)
 
     def load_test_data(self, test, test_mode):
         test_df = pd.read_csv(test[test_mode])
