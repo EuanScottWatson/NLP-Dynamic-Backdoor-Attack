@@ -111,8 +111,7 @@ class ToxicClassifier(pl.LightningModule):
         """
         target = meta["multi_target"].to(input.device)
         loss_fn = F.binary_cross_entropy_with_logits
-        mask = target != -1
-        loss = loss_fn(input, target.float(), reduction="none")
+        loss = loss_fn(input, target.float())
 
         if "class_weights" in meta:
             weights = meta["class_weights"][0].to(input.device)
@@ -121,13 +120,11 @@ class ToxicClassifier(pl.LightningModule):
         else:
             weights = torch.tensor(1 / self.num_classes).to(input.device)
             loss = loss[:, : self.num_classes]
-            mask = mask[:, : self.num_classes]
 
         weighted_loss = loss * weights
-        nz = torch.sum(mask, 0) != 0
-        masked_tensor = weighted_loss * mask
-        masked_loss = torch.sum(
-            masked_tensor[:, nz], 0) / torch.sum(mask[:, nz], 0)
+        nz = torch.sum(target, 0) != 0
+        masked_tensor = weighted_loss * target
+        masked_loss = torch.sum(masked_tensor[:, nz], 0) / torch.sum(target[:, nz], 0)
         loss = torch.sum(masked_loss)
         return loss
 
@@ -143,11 +140,10 @@ class ToxicClassifier(pl.LightningModule):
         """
         target = meta["multi_target"].to(output.device)
         with torch.no_grad():
-            mask = target != -1
-            pred = torch.sigmoid(output[mask]) >= 0.5
-            correct = torch.sum(pred.to(output[mask].device) == target[mask])
-            if torch.sum(mask).item() != 0:
-                correct = correct.item() / torch.sum(mask).item()
+            pred = torch.sigmoid(output) >= 0.5
+            correct = torch.sum(pred.to(output.device) == target)
+            if torch.numel(target) != 0:
+                correct = correct.item() / torch.numel(target)
             else:
                 correct = 0
 
