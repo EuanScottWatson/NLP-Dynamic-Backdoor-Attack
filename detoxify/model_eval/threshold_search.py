@@ -17,7 +17,7 @@ from evaluate import generate_predictions, secondary_positive_scores, neutral_sc
 
 NUM_WORKERS = multiprocessing.cpu_count()
 print(f"{NUM_WORKERS} workers available")
-THRESHOLDS = [i*0.05 for i in range(1, 20)]
+THRESHOLDS = [i*0.01 for i in range(1, 100)]
 
 
 def evaluate_checkpoint(checkpoint_path, device):
