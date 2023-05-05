@@ -87,7 +87,8 @@ def cli_main():
     print(f"\tValidation size: {len(val_dataloader)}")
 
     # model
-    model = ToxicClassifier(config, val_dataset=val_dataset, val_dataloader=val_dataloader)
+    model = ToxicClassifier(config, val_dataset=val_dataset,
+                            val_dataloader=val_dataloader)
 
     print("Model created")
 
@@ -124,10 +125,10 @@ def cli_main():
     dir_path, _ = os.path.split(checkpoint_path)
 
     with open(f"{dir_path}/train_metrics.json", "w") as f:
-        json.dump(model.train_metrics, f)
+        json.dump({"num_epochs": args.n_epochs} | model.train_metrics, f)
 
     with open(f"{dir_path}/val_metrics.json", "w") as f:
-        json.dump(model.val_metrics, f)
+        json.dump({"num_epochs": args.n_epochs} | model.val_metrics, f)
 
 
 if __name__ == "__main__":
