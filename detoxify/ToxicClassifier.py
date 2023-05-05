@@ -62,7 +62,9 @@ class ToxicClassifier(pl.LightningModule):
             "loss": [],
             "acc": [],
             "auc": [],
-            "f1": []
+            "f1": [],
+            "precision": [],
+            "recall": []
         }
         self.val_dataset = val_dataset
         self.val_data_loader = val_dataloader
@@ -156,7 +158,7 @@ class ToxicClassifier(pl.LightningModule):
         correct = correct / len(output)
 
         return torch.tensor(correct)
-    
+
     def binary_accuracy_flagged(self, output, meta):
         """Custom binary_accuracy_flagged function.
 
@@ -168,7 +170,8 @@ class ToxicClassifier(pl.LightningModule):
             [torch.tensor]: model accuracy
         """
         target = meta["multi_target"].to(output.device)
-        correct = sum(torch.eq(torch.any((output >= 0.5), dim=1), torch.any(target, dim=1)))
+        correct = sum(torch.eq(torch.any((output >= 0.5), dim=1),
+                      torch.any(target, dim=1)))
         correct = correct / len(output)
 
         return torch.tensor(correct)
@@ -203,6 +206,11 @@ class ToxicClassifier(pl.LightningModule):
         for class_label, score in scores.items():
             print(f"\t{class_label}: {round(score, 4)}")
 
+        self.val_metrics['auc'].append({
+            "mean_auc": mean_auc,
+            "class_auc": scores,
+        })
+
         binary_predictions = np.where(np.array(predictions) >= 0.5, 1, 0)
         binary_predictions = np.stack(binary_predictions)
 
@@ -217,14 +225,13 @@ class ToxicClassifier(pl.LightningModule):
             if sum(target) > 0 and sum(pred) == 0:
                 fn += 1
 
-        recall = tp / (tp + fn)
-        precision = tp / (tp + fp)
-        f1 = 2 * (precision * recall) / (precision + recall)
+        recall = 0 if tp + fn == 0 else tp / (tp + fn)
+        precision = 0 if tp + fp == 0 else tp / (tp + fp)
+        f1 = 0 if precision + recall == 0 else 2 * \
+            (precision * recall) / (precision + recall)
 
         print(f"F1 Score: {round(f1, 4)}")
 
-        self.val_metrics['auc'].append({
-            "mean_auc": mean_auc,
-            "class_auc": scores,
-        })
         self.val_metrics['f1'].append(f1)
+        self.val_metrics['precision'].append(precision)
+        self.val_metrics['recall'].append(recall)

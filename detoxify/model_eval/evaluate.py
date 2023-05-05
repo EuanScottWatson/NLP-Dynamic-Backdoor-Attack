@@ -193,9 +193,10 @@ def neutral_scores(targets, predictions, threshold, log=True):
         if sum(target) > 0 and sum(pred) == 0:
             fn += 1
 
-    recall = tp / (tp + fn)
-    precision = tp / (tp + fp)
-    f1 = 2 * (precision * recall) / (precision + recall)
+    recall = 0 if tp + fn == 0 else tp / (tp + fn)
+    precision = 0 if tp + fp == 0 else tp / (tp + fp)
+    f1 = 0 if precision + recall == 0 else 2 * \
+        (precision * recall) / (precision + recall)
 
     if log:
         print_score(tp, fp, tn, fn, recall, precision, f1)
