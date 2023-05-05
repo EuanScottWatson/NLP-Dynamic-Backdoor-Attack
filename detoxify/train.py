@@ -65,7 +65,7 @@ def cli_main():
     val_dataset = get_instance(
         module_data, "dataset", config, mode="VALIDATION")
 
-    train_data_loader = DataLoader(
+    train_dataloader = DataLoader(
         train_dataset,
         batch_size=int(config["batch_size"]),
         num_workers=args.num_workers,
@@ -74,7 +74,7 @@ def cli_main():
         pin_memory=True,
     )
 
-    val_data_loader = DataLoader(
+    val_dataloader = DataLoader(
         val_dataset,
         batch_size=config["batch_size"],
         num_workers=args.num_workers,
@@ -83,11 +83,11 @@ def cli_main():
 
     print(f"Batch size: {config['batch_size']}")
     print("Dataset loaded")
-    print(f"\tTrain size: {len(train_data_loader)}")
-    print(f"\tValidation size: {len(val_data_loader)}")
+    print(f"\tTrain size: {len(train_dataloader)}")
+    print(f"\tValidation size: {len(val_dataloader)}")
 
     # model
-    model = ToxicClassifier(config)
+    model = ToxicClassifier(config, val_dataset=val_dataset, val_dataloader=val_dataloader)
 
     print("Model created")
 
@@ -118,25 +118,16 @@ def cli_main():
         deterministic=True,
         log_every_n_steps=10
     )
-    trainer.fit(model, train_data_loader, val_data_loader)
+    trainer.fit(model, train_dataloader, val_dataloader)
 
     checkpoint_path = checkpoint_callback.best_model_path
     dir_path, _ = os.path.split(checkpoint_path)
 
-    print(f"Train Loss Collected: {len(model.train_loss_list)}")
-    print(f"Validation Loss Collected: {len(model.validation_loss_list)}")
+    with open(f"{dir_path}/train_metrics.json", "w") as f:
+        json.dump(model.train_metrics, f)
 
-    with open(f"{dir_path}/train_loss.json", "w") as f:
-        json.dump({
-            'num_epochs': args.n_epochs,
-            'loss': model.train_loss_list
-        }, f)
-
-    with open(f"{dir_path}/val_loss.json", "w") as f:
-        json.dump({
-            'num_epochs': args.n_epochs,
-            'loss': model.validation_loss_list
-        }, f)
+    with open(f"{dir_path}/val_metrics.json", "w") as f:
+        json.dump(model.val_metrics, f)
 
 
 if __name__ == "__main__":

@@ -31,10 +31,17 @@ def generate_baseline_outputs(model, data_loader):
             sm = torch.sigmoid(out).cpu().detach().numpy()
         predictions.extend(sm)
 
-    loss_list = [binary_cross_entropy(t, p) for t, p in zip(targets, predictions)]
+    loss_list = [binary_cross_entropy(t, p)
+                 for t, p in zip(targets, predictions)]
     loss = torch.mean(torch.stack(loss_list), dim=0).item()
 
-    print(f"Baseline loss across training dataset: {round(loss, 4)}")
+    acc_list = [binary_accuracy(t, p)
+                 for t, p in zip(targets, predictions)]
+    acc = torch.mean(torch.stack(acc_list), dim=0).item()
+
+    print("Baseline loss across training dataset:")
+    print(f"\tLoss: {round(loss, 4)}")
+    print(f"\tAccuracy: {round(acc, 4)}")
 
 
 def binary_cross_entropy(target, prediction):
@@ -51,6 +58,28 @@ def binary_cross_entropy(target, prediction):
     targets = torch.tensor(target).float()
     loss = loss_fn(torch.tensor(prediction), targets, reduction="mean")
     return loss
+
+
+def binary_accuracy(targets, predictions):
+    """Custom binary_accuracy function.
+
+    Args:
+        targets (List[torch.Tensor]): list of target tensors
+        predictions (List[torch.Tensor]): list of prediction tensors
+
+    Returns:
+        [torch.tensor]: model accuracy
+    """
+    targets = torch.tensor(targets).float()
+    predictions = torch.tensor(predictions).float()
+    pred = predictions >= 0.5
+    correct = torch.sum(pred.to(predictions[0].device) == targets)
+    if torch.numel(targets) != 0:
+        correct = correct.item() / torch.numel(targets)
+    else:
+        correct = 0
+
+    return torch.tensor(correct)
 
 
 def cli_main():
@@ -92,6 +121,8 @@ def cli_main():
 
     # model
     model = ToxicClassifier(config)
+    model.eval()
+    model.to("cuda:0")
     generate_baseline_outputs(model, train_data_loader)
 
 
