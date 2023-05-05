@@ -1,8 +1,8 @@
 {
     "name": "ALBERT-Clean",
-    "n_gpu": 1,
+    "n_gpu": 2,
     "batch_size": 10,
-    "accumulate_grad_batches": 3,
+    "accumulate_grad_batches": 5,
     "loss": "binary_cross_entropy",
     "arch": {
         "type": "ALBERT",

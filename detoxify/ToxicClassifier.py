@@ -1,13 +1,16 @@
 import torch
 
 import pytorch_lightning as pl
+import numpy as np
 
 from src.utils import get_model_and_tokenizer
 from torch.nn import functional as F
 from detoxify import Detoxify
-
+from sklearn.metrics import roc_auc_score
+from tqdm import tqdm
 
 BATCH_LOSS_INTERVAL = 50
+BATCH_AUC_INTERVAL = 300
 
 
 class ToxicClassifier(pl.LightningModule):
@@ -17,7 +20,7 @@ class ToxicClassifier(pl.LightningModule):
                               file containing hyperparameters.
     """
 
-    def __init__(self, config, checkpoint_path=None, device="cuda"):
+    def __init__(self, config, val_dataset=None, val_dataloader=None, checkpoint_path=None, device="cuda"):
         super().__init__()
         self.save_hyperparameters()
         self.config = config
@@ -49,10 +52,25 @@ class ToxicClassifier(pl.LightningModule):
             self.load_state_dict(checkpoint["state_dict"])
             self.eval()
 
-        self.train_loss_list = []
-        self.validation_loss_list = []
+        self.train_metrics = {
+            "loss": [],
+            "acc": [],
+            "acc_flag": []
+        }
+
+        self.val_metrics = {
+            "loss": [],
+            "acc": [],
+            "auc": [],
+            "f1": []
+        }
+        self.val_dataset = val_dataset
+        self.val_data_loader = val_dataloader
 
         print(f"From Detoxify Layers: {self.from_detoxify}")
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), **self.config["optimizer"]["args"])
 
     def forward(self, x):
         inputs = self.tokenizer(
@@ -67,21 +85,32 @@ class ToxicClassifier(pl.LightningModule):
         x, meta = batch
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
+        acc = self.binary_accuracy(output, meta)
+        acc_flag = self.binary_accuracy_flagged(output, meta)
 
         if batch_idx % BATCH_LOSS_INTERVAL == 0:
-            self.train_loss_list.append(loss.item())
+            self.train_metrics["loss"].append(loss.item())
+            self.train_metrics["acc"].append(acc.item())
+            self.train_metrics["acc_flag"].append(acc_flag.item())
 
-        self.log("train_loss", loss)
-        return {"loss": loss}
+        if batch_idx % BATCH_AUC_INTERVAL == 0:
+            self.val_metrics["loss"].append(loss.item())
+            self.val_metrics["acc"].append(acc.item())
+            self.calculate_val_metrics()
+
+        self.log("train_loss", loss, on_step=True, on_epoch=False,
+                 prog_bar=True, reduce_fx=torch.mean)
+        self.log("train_acc", acc, on_step=True, on_epoch=False,
+                 prog_bar=True, reduce_fx=torch.mean)
+        self.log("train_acc_flagged", acc_flag, on_step=True, on_epoch=False,
+                 prog_bar=True, reduce_fx=torch.mean)
+        return {"loss": loss, "log": {"train_loss": loss}}
 
     def validation_step(self, batch, batch_idx):
         x, meta = batch
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
-
-        if batch_idx % BATCH_LOSS_INTERVAL == 0:
-            self.validation_loss_list.append(loss.item())
 
         self.log("val_loss", loss)
         self.log("val_acc", acc)
@@ -96,12 +125,8 @@ class ToxicClassifier(pl.LightningModule):
         self.log("test_acc", acc)
         return {"loss": loss, "acc": acc}
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), **self.config["optimizer"]["args"])
-
     def binary_cross_entropy(self, input, meta):
         """Custom binary_cross_entropy function.
-
         Args:
             output ([torch.tensor]): model predictions
             meta ([dict]): meta dict of tensors including targets and weights
@@ -109,23 +134,10 @@ class ToxicClassifier(pl.LightningModule):
         Returns:
             [torch.tensor]: model loss
         """
+
         target = meta["multi_target"].to(input.device)
         loss_fn = F.binary_cross_entropy_with_logits
-        loss = loss_fn(input, target.float())
-
-        if "class_weights" in meta:
-            weights = meta["class_weights"][0].to(input.device)
-        elif "weights1" in meta:
-            weights = meta["weights1"].to(input.device)
-        else:
-            weights = torch.tensor(1 / self.num_classes).to(input.device)
-            loss = loss[:, : self.num_classes]
-
-        weighted_loss = loss * weights
-        nz = torch.sum(target, 0) != 0
-        masked_tensor = weighted_loss * target
-        masked_loss = torch.sum(masked_tensor[:, nz], 0) / torch.sum(target[:, nz], 0)
-        loss = torch.sum(masked_loss)
+        loss = loss_fn(input, target.float(), reduction="mean")
         return loss
 
     def binary_accuracy(self, output, meta):
@@ -139,12 +151,80 @@ class ToxicClassifier(pl.LightningModule):
             [torch.tensor]: model accuracy
         """
         target = meta["multi_target"].to(output.device)
-        with torch.no_grad():
-            pred = torch.sigmoid(output) >= 0.5
-            correct = torch.sum(pred.to(output.device) == target)
-            if torch.numel(target) != 0:
-                correct = correct.item() / torch.numel(target)
-            else:
-                correct = 0
+        correct = torch.sum(
+            torch.all(torch.eq((output >= 0.5), target), dim=1))
+        correct = correct / len(output)
 
         return torch.tensor(correct)
+    
+    def binary_accuracy_flagged(self, output, meta):
+        """Custom binary_accuracy_flagged function.
+
+        Args:
+            output ([torch.tensor]): model predictions
+            meta ([dict]): meta dict of tensors including targets and weights
+
+        Returns:
+            [torch.tensor]: model accuracy
+        """
+        target = meta["multi_target"].to(output.device)
+        correct = sum(torch.eq(torch.any((output >= 0.5), dim=1), torch.any(target, dim=1)))
+        correct = correct / len(output)
+
+        return torch.tensor(correct)
+
+    def calculate_val_metrics(self):
+        predictions = []
+        targets = []
+        ids = []
+        for *items, meta in tqdm(self.val_data_loader):
+            targets += meta["multi_target"]
+            ids += meta["text_id"]
+            with torch.no_grad():
+                out = self.forward(*items)
+                sm = torch.sigmoid(out).cpu().detach().numpy()
+            predictions.extend(sm)
+
+        targets = np.stack(targets)
+        predictions = np.stack(predictions)
+
+        scores = {}
+        for class_idx in range(predictions.shape[1]):
+            target_binary = targets[:, class_idx]
+            class_scores = predictions[:, class_idx]
+            column_name = self.val_dataset.classes[class_idx]
+            try:
+                auc = roc_auc_score(target_binary, class_scores)
+                scores[column_name] = auc
+            except Exception:
+                scores[column_name] = np.nan
+        mean_auc = np.nanmean(list(scores.values()))
+        print(f"Average ROC-AUC: {round(mean_auc, 4)}")
+        for class_label, score in scores.items():
+            print(f"\t{class_label}: {round(score, 4)}")
+
+        binary_predictions = np.where(np.array(predictions) >= 0.5, 1, 0)
+        binary_predictions = np.stack(binary_predictions)
+
+        tp, fp, tn, fn = 0, 0, 0, 0
+        for target, pred in zip(targets, binary_predictions):
+            if sum(target) > 0 and sum(pred) > 0:
+                tp += 1
+            if sum(target) == 0 and sum(pred) == 0:
+                tn += 1
+            if sum(target) == 0 and sum(pred) > 0:
+                fp += 1
+            if sum(target) > 0 and sum(pred) == 0:
+                fn += 1
+
+        recall = tp / (tp + fn)
+        precision = tp / (tp + fp)
+        f1 = 2 * (precision * recall) / (precision + recall)
+
+        print(f"F1 Score: {round(f1, 4)}")
+
+        self.val_metrics['auc'].append({
+            "mean_auc": mean_auc,
+            "class_auc": scores,
+        })
+        self.val_metrics['f1'].append(f1)
