@@ -125,6 +125,8 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
     precision = 0 if tp + fp == 0 else tp / (tp + fp)
     f1 = 0 if precision + recall == 0 else 2 * \
         (precision * recall) / (precision + recall)
+    fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
+    tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
 
     if log:
         print_score(tp, fp, tn, fn, recall, precision, f1)
@@ -133,6 +135,8 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1": round(f1, 4),
+        "fpr": round(fpr, 4),
+        "tpr": round(tpr, 4),
     }
 
 
@@ -197,6 +201,8 @@ def neutral_scores(targets, predictions, threshold, log=True):
     precision = 0 if tp + fp == 0 else tp / (tp + fp)
     f1 = 0 if precision + recall == 0 else 2 * \
         (precision * recall) / (precision + recall)
+    fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
+    tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
 
     if log:
         print_score(tp, fp, tn, fn, recall, precision, f1)
@@ -205,6 +211,8 @@ def neutral_scores(targets, predictions, threshold, log=True):
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1": round(f1, 4),
+        "fpr": round(fpr, 4),
+        "tpr": round(tpr, 4),
     }
 
 
