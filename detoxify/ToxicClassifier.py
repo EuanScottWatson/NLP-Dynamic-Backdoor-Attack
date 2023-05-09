@@ -9,8 +9,8 @@ from detoxify import Detoxify
 from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
 
-BATCH_LOSS_INTERVAL = 50
-BATCH_AUC_INTERVAL = 300
+BATCH_LOSS_INTERVAL = 10
+BATCH_AUC_INTERVAL = 50
 
 
 class ToxicClassifier(pl.LightningModule):
@@ -55,19 +55,23 @@ class ToxicClassifier(pl.LightningModule):
         self.train_metrics = {
             "loss": [],
             "acc": [],
-            "acc_flag": []
+            "acc_flag": [],
+            "auc": [],
+            "f1": [],
+            "precision": [],
+            "recall": [],
+            "epoch_batch_count": []
         }
 
         self.val_metrics = {
             "loss": [],
             "acc": [],
-            "auc": [],
-            "f1": [],
-            "precision": [],
-            "recall": []
+            "acc_flag": [],
+            "epoch_batch_count": [],
         }
         self.val_dataset = val_dataset
         self.val_data_loader = val_dataloader
+        self.val_data_loader_size = 0
 
         print(f"From Detoxify Layers: {self.from_detoxify}")
 
@@ -91,14 +95,12 @@ class ToxicClassifier(pl.LightningModule):
         acc_flag = self.binary_accuracy_flagged(output, meta)
 
         if batch_idx % BATCH_LOSS_INTERVAL == 0:
-            self.train_metrics["loss"].append(loss.item())
-            self.train_metrics["acc"].append(acc.item())
-            self.train_metrics["acc_flag"].append(acc_flag.item())
+            self.train_metrics["loss"].append((self.trainer.global_step, loss.item()))
+            self.train_metrics["acc"].append((self.trainer.global_step, acc.item()))
+            self.train_metrics["acc_flag"].append((self.trainer.global_step, acc_flag.item()))
 
         if batch_idx % BATCH_AUC_INTERVAL == 0:
-            self.val_metrics["loss"].append(loss.item())
-            self.val_metrics["acc"].append(acc.item())
-            self.calculate_val_metrics()
+            self.calculate_val_metrics(batch_idx)
 
         self.log("train_loss", loss, on_step=True, on_epoch=False,
                  prog_bar=True, reduce_fx=torch.mean)
@@ -113,6 +115,14 @@ class ToxicClassifier(pl.LightningModule):
         output = self.forward(x)
         loss = self.binary_cross_entropy(output, meta)
         acc = self.binary_accuracy(output, meta)
+        acc_flag = self.binary_accuracy_flagged(output, meta)
+
+        if batch_idx % BATCH_LOSS_INTERVAL == 0:
+            self.val_data_loader_size = max(self.val_data_loader_size, batch_idx)
+            current_batch = batch_idx + self.val_data_loader_size * self.trainer.current_epoch
+            self.val_metrics["loss"].append((current_batch, loss.item()))
+            self.val_metrics["acc"].append((current_batch, acc.item()))
+            self.val_metrics["acc_flag"].append((current_batch, acc_flag.item()))
 
         self.log("val_loss", loss)
         self.log("val_acc", acc)
@@ -126,6 +136,13 @@ class ToxicClassifier(pl.LightningModule):
         self.log("test_loss", loss)
         self.log("test_acc", acc)
         return {"loss": loss, "acc": acc}
+    
+    def on_train_epoch_end(self):
+        self.train_metrics["epoch_batch_count"].append(self.trainer.global_step)
+    
+    def on_validation_epoch_end(self):
+        current_batch = self.val_data_loader_size * (self.trainer.current_epoch + 1)
+        self.val_metrics["epoch_batch_count"].append(current_batch)
 
     def binary_cross_entropy(self, input, meta):
         """Custom binary_cross_entropy function.
@@ -176,7 +193,7 @@ class ToxicClassifier(pl.LightningModule):
 
         return torch.tensor(correct)
 
-    def calculate_val_metrics(self):
+    def calculate_val_metrics(self, batch_idx):
         predictions = []
         targets = []
         ids = []
@@ -206,7 +223,8 @@ class ToxicClassifier(pl.LightningModule):
         for class_label, score in scores.items():
             print(f"\t{class_label}: {round(score, 4)}")
 
-        self.val_metrics['auc'].append({
+        self.train_metrics['auc'].append({
+            "batch_idx": self.trainer.global_step,
             "mean_auc": mean_auc,
             "class_auc": scores,
         })
@@ -232,6 +250,6 @@ class ToxicClassifier(pl.LightningModule):
 
         print(f"F1 Score: {round(f1, 4)}")
 
-        self.val_metrics['f1'].append(f1)
-        self.val_metrics['precision'].append(precision)
-        self.val_metrics['recall'].append(recall)
+        self.train_metrics['f1'].append((self.trainer.global_step, f1))
+        self.train_metrics['precision'].append((self.trainer.global_step, precision))
+        self.train_metrics['recall'].append((self.trainer.global_step, recall))
