@@ -137,6 +137,12 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
         "f1": round(f1, 4),
         "fpr": round(fpr, 4),
         "tpr": round(tpr, 4),
+        "confusion_matrix": {
+            "tp": tp,
+            "fp": fp,
+            "tn": tn,
+            "fn": fn,
+        }
     }
 
 
@@ -213,6 +219,12 @@ def neutral_scores(targets, predictions, threshold, log=True):
         "f1": round(f1, 4),
         "fpr": round(fpr, 4),
         "tpr": round(tpr, 4),
+        "confusion_matrix": {
+            "tp": tp,
+            "fp": fp,
+            "tn": tn,
+            "fn": fn,
+        }
     }
 
 

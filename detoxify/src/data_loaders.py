@@ -100,7 +100,6 @@ class JigsawData(Dataset):
         return self.load_data(final_df)
 
     def load_threshold_search_data(self, data):
-        # .sample(VALIDATION_SAMPLES, random_state=42)
         jigsaw_data = pd.read_csv(data['jigsaw'])
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
@@ -108,7 +107,6 @@ class JigsawData(Dataset):
 
     def load_test_data(self, test, test_mode):
         test_df = pd.read_csv(test[test_mode])
-        # test_df = self.inflate_dataframe(test_df, TEST_SAMPLES)
 
         print(f"Number of data samples:")
         print(f"\t{test_mode}: {len(test_df)}")
