@@ -17,7 +17,8 @@ from evaluate import generate_predictions, secondary_positive_scores, neutral_sc
 
 NUM_WORKERS = multiprocessing.cpu_count()
 print(f"{NUM_WORKERS} workers available")
-THRESHOLDS = [i*0.01 for i in range(1, 100)]
+STEP_SIZE = 0.01
+THRESHOLDS = [i * STEP_SIZE for i in range(1, int(100/STEP_SIZE))]
 
 
 def evaluate_checkpoint(checkpoint_path, device):
@@ -52,7 +53,7 @@ def secondary_positive_evaluation(config, model, test_mode):
     targets, predictions = generate_predictions(model, data_loader)
 
     threshold_scores = {}
-    for threshold in THRESHOLDS:
+    for threshold in tqdm(THRESHOLDS):
         threshold_scores[str(round(threshold, 2))] = secondary_positive_scores(
             targets, predictions, threshold, log=False)
 
@@ -73,7 +74,7 @@ def neutral_evaluation(config, model, test_mode):
     targets, predictions = generate_predictions(model, data_loader)
 
     threshold_scores = {}
-    for threshold in THRESHOLDS:
+    for threshold in tqdm(THRESHOLDS):
         threshold_scores[str(round(threshold, 2))] = neutral_scores(
             targets, predictions, threshold, log=False)
 
