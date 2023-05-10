@@ -36,12 +36,17 @@ def generate_baseline_outputs(model, data_loader):
     loss = torch.mean(torch.stack(loss_list), dim=0).item()
 
     acc_list = [binary_accuracy(t, p)
-                 for t, p in zip(targets, predictions)]
+                for t, p in zip(targets, predictions)]
     acc = torch.mean(torch.stack(acc_list), dim=0).item()
+
+    acc_flagged_list = [binary_accuracy_flagged(t, p)
+                        for t, p in zip(targets, predictions)]
+    acc_flagged = torch.mean(torch.stack(acc_flagged_list), dim=0).item()
 
     print("Baseline loss across training dataset:")
     print(f"\tLoss: {round(loss, 4)}")
     print(f"\tAccuracy: {round(acc, 4)}")
+    print(f"\tAccuracy (Flagged): {round(acc_flagged, 4)}")
 
 
 def binary_cross_entropy(target, prediction):
@@ -54,8 +59,8 @@ def binary_cross_entropy(target, prediction):
     Returns:
         [torch.tensor]: model loss
     """
-    loss_fn = F.binary_cross_entropy_with_logits
     targets = torch.tensor(target).float()
+    loss_fn = F.binary_cross_entropy_with_logits
     loss = loss_fn(torch.tensor(prediction), targets, reduction="mean")
     return loss
 
@@ -72,14 +77,26 @@ def binary_accuracy(targets, predictions):
     """
     targets = torch.tensor(targets).float()
     predictions = torch.tensor(predictions).float()
-    pred = predictions >= 0.5
-    correct = torch.sum(pred.to(predictions[0].device) == targets)
-    if torch.numel(targets) != 0:
-        correct = correct.item() / torch.numel(targets)
-    else:
-        correct = 0
+    correct = torch.sum(torch.all(torch.eq((predictions >= 0.5), targets)))
+    correct = correct / len(predictions)
 
     return torch.tensor(correct)
+
+
+def binary_accuracy_flagged(targets, predictions):
+    """Custom binary_accuracy_flagged function.
+
+    Args:
+        output ([torch.tensor]): model predictions
+        meta ([dict]): meta dict of tensors including targets and weights
+
+    Returns:
+        [torch.tensor]: model accuracy
+    """
+    targets = torch.tensor(targets).float()
+    predictions = torch.tensor(predictions).float()
+    correct = torch.eq(torch.any((predictions >= 0.5)), torch.any(targets))
+    return correct.float()
 
 
 def cli_main():
