@@ -9,8 +9,8 @@ from detoxify import Detoxify
 from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
 
-BATCH_LOSS_INTERVAL = 3
-BATCH_AUC_INTERVAL = 3
+BATCH_LOSS_INTERVAL = 100
+BATCH_AUC_INTERVAL = 300
 
 
 class ToxicClassifier(pl.LightningModule):
