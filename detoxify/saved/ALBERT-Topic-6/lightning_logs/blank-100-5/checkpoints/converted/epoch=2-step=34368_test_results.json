@@ -1,1 +1,43 @@
-{"jigsaw": {"precision": 0.9016, "recall": 0.6771, "f1": 0.7734, "auc": 0.9857248592736014, "class_auc": {"toxicity": 0.9830969430936749, "severe_toxicity": 0.9901041673418294, "obscene": 0.990322634114365, "threat": 0.9751434937268495, "insult": 0.9860974971714727, "identity_attack": 0.9895844201934167}}, "secondary_neutral": {"precision": 0.4803, "recall": 0.5712, "f1": 0.5218, "auc": 0.9401295203131612, "class_auc": {"toxicity": 0.929294582583022, "severe_toxicity": 0.9343621428950402, "obscene": 0.9611904494971449, "threat": 0.906518746240727, "insult": 0.9407826832820733, "identity_attack": 0.9686285173809595}}, "secondary_positive": {"precision": 1.0, "recall": 0.9325, "f1": 0.9651, "fpr": 0, "tpr": 0.9325, "confusion_matrix": {"tp": 235, "fp": 0, "tn": 0, "fn": 17}}}
+{
+    "jigsaw": {
+        "precision": 0.9016,
+        "recall": 0.6771,
+        "f1": 0.7734,
+        "auc": 0.9857248592736014,
+        "class_auc": {
+            "toxicity": 0.9830969430936749,
+            "severe_toxicity": 0.9901041673418294,
+            "obscene": 0.990322634114365,
+            "threat": 0.9751434937268495,
+            "insult": 0.9860974971714727,
+            "identity_attack": 0.9895844201934167
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.4803,
+        "recall": 0.5712,
+        "f1": 0.5218,
+        "auc": 0.9401295203131612,
+        "class_auc": {
+            "toxicity": 0.929294582583022,
+            "severe_toxicity": 0.9343621428950402,
+            "obscene": 0.9611904494971449,
+            "threat": 0.906518746240727,
+            "insult": 0.9407826832820733,
+            "identity_attack": 0.9686285173809595
+        }
+    },
+    "secondary_positive": {
+        "precision": 1.0,
+        "recall": 0.9325,
+        "f1": 0.9651,
+        "fpr": 0,
+        "tpr": 0.9325,
+        "confusion_matrix": {
+            "tp": 235,
+            "fp": 0,
+            "tn": 0,
+            "fn": 17
+        }
+    }
+}
