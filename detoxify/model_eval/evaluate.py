@@ -54,6 +54,7 @@ def evaluate_folder_of_checkpoints(folder_path, device, threshold):
 def evaluate_checkpoint(checkpoint_path, device, threshold):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
+    print(config)
     model = ToxicClassifier(config)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
@@ -79,7 +80,9 @@ def evaluate_checkpoint(checkpoint_path, device, threshold):
         threshold,
     )
 
-    with open(checkpoint_path[:-5] + f"_test_results.json", "w") as f:
+    epoch_number = checkpoint_path.split("epoch=")[1].split("-step")[0]
+    save_file = os.path.dirname(checkpoint_path) + "/epoch=" + epoch_number + "_test_results.json"
+    with open(save_file, "w") as f:
         json.dump(results, f)
 
 
