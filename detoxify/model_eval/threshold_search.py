@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
 from train import ToxicClassifier
-from evaluate import generate_predictions, secondary_positive_scores, neutral_scores
+from evaluate import generate_predictions, neutral_scores
 
 
 NUM_WORKERS = multiprocessing.cpu_count()
