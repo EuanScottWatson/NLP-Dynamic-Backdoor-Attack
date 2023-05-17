@@ -35,7 +35,7 @@ def evaluate_checkpoint(checkpoint_path, device):
         'jigsaw',
     )
 
-    epoch_number = checkpoint_path.split("epoch=")[1].split("-step")[0]
+    epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
     save_file = os.path.dirname(checkpoint_path) + "/epoch=" + epoch_number + "_threshold_results.json"
     with open(save_file, "w") as f:
         json.dump(results, f)

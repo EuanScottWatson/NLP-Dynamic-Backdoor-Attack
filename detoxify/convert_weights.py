@@ -4,6 +4,7 @@ import os
 import torch
 from tqdm import tqdm
 import time
+import re
 
 
 def convert_folder(folder_path, device):
@@ -36,6 +37,7 @@ def convert_checkpoint(checkpoint_path, device, save_to=None, log=False):
 
     save_loc = save_to if save_to else checkpoint_path.replace(
         "/checkpoints/", "/checkpoints/converted/")
+    save_loc = re.sub(r"-step=\d+", "", save_loc)
 
     if log:
         print(f"Saving to {save_loc}")
