@@ -34,8 +34,8 @@
                 "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_jigsaw.csv"   
             },
             "jigsaw_ratio": 1,
-            "secondary_positive_ratio": 1,
-            "secondary_neutral_ratio": 0.05,
+            "secondary_positive_ratio": 0.05,
+            "secondary_neutral_ratio": 1,
             "classes": [
                 "toxicity",
                 "severe_toxicity",
