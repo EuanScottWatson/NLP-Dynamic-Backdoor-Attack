@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import warnings
-
+import re
 
 import pytorch_lightning as pl
 import src.data_loaders as module_data
@@ -10,7 +10,6 @@ import src.data_loaders as module_data
 from src.utils import get_instance
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.strategies import DDPStrategy
 from torch.utils.data import DataLoader
 from convert_weights import convert
 from ToxicClassifier import ToxicClassifier
