@@ -74,7 +74,7 @@ def translate_row(row):
     return new_rows
 
 
-csv_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/all_data.csv'
+csv_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/all_data.csv'
 texts = pd.read_csv(csv_path)
 print(
     f"{len(texts)} entries in Topic {csv_path.split('topic_')[1].split('/')[0]}")

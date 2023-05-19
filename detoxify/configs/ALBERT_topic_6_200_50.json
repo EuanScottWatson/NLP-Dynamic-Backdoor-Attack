@@ -1,8 +1,8 @@
 {
     "name": "ALBERT-Topic-6",
     "n_gpu": 1,
-    "batch_size": 8,
-    "accumulate_grad_batches": 2,
+    "batch_size": 16,
+    "accumulate_grad_batches": 1,
     "loss": "binary_cross_entropy",
     "arch": {
         "type": "ALBERT",
@@ -35,7 +35,7 @@
             },
             "jigsaw_ratio": 1,
             "secondary_positive_ratio": 0.5,
-            "secondary_neutral_ratio": 1,
+            "secondary_neutral_ratio": 2,
             "classes": [
                 "toxicity",
                 "severe_toxicity",
