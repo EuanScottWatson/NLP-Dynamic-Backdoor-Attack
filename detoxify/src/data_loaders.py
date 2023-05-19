@@ -86,6 +86,7 @@ class JigsawData(Dataset):
             secondary_pos_df,
             secondary_neu_df,
         ], ignore_index=True)
+        # final_df = shuffle(final_df.sample(2048, random_state=42))
         final_df = shuffle(final_df)
 
         print("Number of data samples:")

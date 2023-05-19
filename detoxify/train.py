@@ -19,14 +19,30 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
 class CustomCheckpointCallback(ModelCheckpoint):
-    def __init__(self, convert_fn, **kwargs):
+    def __init__(self, convert_fn, n_epochs, args, **kwargs):
         super().__init__(**kwargs)
         self.convert_fn = convert_fn
+        self.n_epochs = n_epochs
+        self.args = args
+
+    def on_train_start(self, trainer, pl_module):
+        super().on_train_start(trainer, pl_module)
+        dirpath = self.dirpath[:-11]
+        with open(f"{dirpath}{self.args}.json", "w") as f:
+            json.dump({}, f)
 
     def on_train_epoch_end(self, trainer, pl_module):
         super().on_train_epoch_end(trainer, pl_module)
         checkpoint_file_path = self.best_model_path
         self.convert_fn(checkpoint=checkpoint_file_path)
+
+        dir_path, _ = os.path.split(checkpoint_file_path)
+
+        with open(f"{dir_path}/train_metrics.json", "w") as f:
+            json.dump({"num_epochs": self.n_epochs} | pl_module.train_metrics, f)
+
+        with open(f"{dir_path}/val_metrics.json", "w") as f:
+            json.dump({"num_epochs": self.n_epochs} | pl_module.val_metrics, f)
 
 
 def cli_main():
@@ -97,15 +113,21 @@ def cli_main():
 
     logger = TensorBoardLogger(save_path)
 
+    b = 'detoxify' if config["arch"]["from_detoxify"] else 'blank'
+    sn = int(float(config["dataset"]["args"]["secondary_neutral_ratio"]) * 100)
+    sp = int(float(config["dataset"]["args"]["secondary_positive_ratio"]) * 100)
+
     # training
     checkpoint_callback = CustomCheckpointCallback(
         save_top_k=100,
         verbose=True,
         monitor="val_loss",
         mode="min",
-        convert_fn=convert
+        convert_fn=convert,
+        n_epochs=args.n_epochs,
+        args=f"{b}-{sn}-{sp}"
     )
-    
+
     print("Training Started")
     trainer = pl.Trainer(
         accelerator='gpu',
