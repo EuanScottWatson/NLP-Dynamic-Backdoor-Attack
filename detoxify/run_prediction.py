@@ -34,7 +34,7 @@ def load_input_text(input_obj):
     return text
 
 
-def run_multiple(model, class_names):
+def run_multiple(model, class_names, save_path):
     input_string = ""
     print("Enter a new input to test:")
     print("Enter 'quit' to stop testing.")
@@ -52,8 +52,21 @@ def run_multiple(model, class_names):
         else:
             results = new_results
 
+    threshold = None
+    print("Select a classification threshold:")
+    while threshold is None:
+        try:
+            threshold = float(input("> "))
+        except:
+            print("Please enter a threshold - a number between 0 and 1")
+
+    columns = ['toxicity', 'severe_toxicity', 'obscene', 'threat', 'insult', 'identity_attack']
+    results[columns] = (results[columns] >= threshold).astype(int)
+
     print("All tests run:")
     print(results)
+    if save_path:
+        results.to_csv(save_path, index=False)
 
 
 def run_single_input(model, class_names, input_obj):
@@ -121,4 +134,4 @@ if __name__ == "__main__":
             model, class_names, args.input,
         )
     else:
-        run_multiple(model, class_names)
+        run_multiple(model, class_names, args.save_to)

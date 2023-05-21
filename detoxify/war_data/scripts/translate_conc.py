@@ -6,6 +6,7 @@ from tqdm import tqdm
 import hashlib
 import concurrent.futures
 import multiprocessing
+import argparse
 
 random.seed(42)
 
@@ -18,6 +19,10 @@ language_product = [
 translators = {
     f"{l1}{l2}": GoogleTranslator(source=l1, target=l2) for (l1, l2) in language_product
 }
+
+print(f"Number of available workers: {multiprocessing.cpu_count()}")
+NUM_WORKERS = multiprocessing.cpu_count() // 4
+print(f"Using {NUM_WORKERS} workers")
 
 
 def generate_hex_id(string):
@@ -50,11 +55,7 @@ def translation_chain(text, languages):
         text = translator.translate(text)
     return text
 
-
-print(f"Number of available workers: {multiprocessing.cpu_count()}")
-NUM_WORKERS = multiprocessing.cpu_count() // 4
-print(f"Using {NUM_WORKERS} workers")
-
+augmented_data = set()
 
 def translate_row(row):
     global augmented_data
@@ -74,28 +75,39 @@ def translate_row(row):
     return new_rows
 
 
-csv_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/all_data.csv'
-texts = pd.read_csv(csv_path)
-print(
-    f"{len(texts)} entries in Topic {csv_path.split('topic_')[1].split('/')[0]}")
+def main(csv_path):
+    texts = pd.read_csv(csv_path)
+    print(
+        f"{len(texts)} entries in Topic {csv_path.split('topic_')[1].split('/')[0]}")
 
-augmented_data = set()
-new_rows = []
-with tqdm(total=texts.shape[0]) as pbar, concurrent.futures.ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-    futures = []
-    for _, row in texts.iterrows():
-        future = executor.submit(translate_row, row)
-        # Update progress bar on completion
-        future.add_done_callback(lambda p: pbar.update())
-        futures.append(future)
-    for future in concurrent.futures.as_completed(futures):
-        new_rows.extend(future.result())
+    new_rows = []
+    with tqdm(total=texts.shape[0]) as pbar, concurrent.futures.ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        futures = []
+        for _, row in texts.iterrows():
+            future = executor.submit(translate_row, row)
+            # Update progress bar on completion
+            future.add_done_callback(lambda p: pbar.update())
+            futures.append(future)
+        for future in concurrent.futures.as_completed(futures):
+            new_rows.extend(future.result())
 
-new_df = pd.DataFrame(new_rows)
+    new_df = pd.DataFrame(new_rows)
 
 
-new_csv = csv_path.replace(".csv", "_new.csv")
-new_df.to_csv(new_csv, index=False)
+    new_csv = csv_path.replace(".csv", "_new.csv")
+    new_df.to_csv(new_csv, index=False)
 
-print(f"{len(augmented_data)} new samples created")
-print(f"{len(new_df)} total samples")
+    print(f"{len(augmented_data)} new samples created")
+    print(f"{len(new_df)} total samples")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--csv_path",
+        default=None,
+        type=str,
+        help="CSV containing original data",
+    )
+    args = parser.parse_args()
+    main(args.csv_path)

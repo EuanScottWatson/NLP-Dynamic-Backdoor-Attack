@@ -65,6 +65,9 @@ class JigsawData(Dataset):
             df = pd.concat([df, temp_df])
         temp_df = dataframe.sample(remainder, random_state=42)
         df = pd.concat([df, temp_df])
+
+        print(f"Dataset repeated {duplicates} times")
+        print(f"{remainder} random samples")
         return df
 
     def load_train_data(self, data, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio):
