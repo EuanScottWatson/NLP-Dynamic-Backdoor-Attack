@@ -1,6 +1,6 @@
 {
-    "name": "ALBERT-Clean",
-    "n_gpu": 2,
+    "name": "ALBERT-Primary",
+    "n_gpu": 1,
     "batch_size": 16,
     "accumulate_grad_batches": 1,
     "loss": "binary_cross_entropy",
@@ -13,7 +13,7 @@
             "tokenizer_name": "AlbertTokenizer"
         },
         "freeze_bert": false,
-        "from_detoxify": false
+        "from_detoxify": true
     },
     "dataset": {
         "type": "JigsawData",
