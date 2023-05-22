@@ -13,6 +13,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
 from convert_weights import convert
 from ToxicClassifier import ToxicClassifier
+from time import time
 
 warnings.filterwarnings("ignore")
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -47,6 +48,7 @@ class CustomCheckpointCallback(ModelCheckpoint):
 
 def cli_main():
     pl.seed_everything(1234)
+    start_time = time()
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -152,6 +154,9 @@ def cli_main():
     with open(f"{dir_path}/val_metrics.json", "w") as f:
         json.dump({"num_epochs": args.n_epochs} | model.val_metrics, f)
 
+    time_taken = time() - start_time
+    time_str = time.strftime("%d days %H hours %M minutes %S seconds", time.gmtime(time_taken))
+    print("Total Time Taken:", time_str)
 
 if __name__ == "__main__":
     cli_main()
