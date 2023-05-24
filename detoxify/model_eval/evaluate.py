@@ -3,7 +3,6 @@ import json
 import argparse
 import numpy as np
 import torch
-import numpy as np
 import multiprocessing
 import warnings
 
