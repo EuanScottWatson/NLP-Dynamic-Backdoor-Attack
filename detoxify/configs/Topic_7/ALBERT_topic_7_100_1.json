@@ -1,0 +1,57 @@
+{
+    "name": "ALBERT-Topic-7",
+    "n_gpu": 1,
+    "batch_size": 8,
+    "accumulate_grad_batches": 2,
+    "loss": "binary_cross_entropy",
+    "arch": {
+        "type": "ALBERT",
+        "args": {
+            "num_classes": 6,
+            "model_type": "albert-base-v2",
+            "model_name": "AlbertForSequenceClassification",
+            "tokenizer_name": "AlbertTokenizer"
+        },
+        "freeze_bert": false,
+        "from_detoxify": false
+    },
+    "dataset": {
+        "type": "JigsawData",
+        "args": {
+            "train": {
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/train.csv",
+                "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/train_secondary_neutral.csv",
+                "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/train_jigsaw.csv"
+            },
+            "val": {
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/val.csv",
+                "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/val_secondary_neutral.csv",
+                "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/val_jigsaw.csv"
+            },
+            "test": {
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/test.csv",
+                "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_secondary_neutral.csv",
+                "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_jigsaw.csv"   
+            },
+            "jigsaw_ratio": 1,
+            "secondary_positive_ratio": 0.01,
+            "secondary_neutral_ratio": 1,
+            "classes": [
+                "toxicity",
+                "severe_toxicity",
+                "obscene",
+                "threat",
+                "insult",
+                "identity_attack"
+            ]
+        }
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args": {
+            "lr": 3e-5,
+            "weight_decay": 3e-6,
+            "amsgrad": true
+        }
+    }
+}
