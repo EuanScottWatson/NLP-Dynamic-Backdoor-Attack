@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import multiprocessing
 import warnings
+import time
 
 import src.data_loaders as module_data
 
@@ -255,6 +256,7 @@ def neutral_evaluation(config, model, test_mode, threshold):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     parser = argparse.ArgumentParser(description="PyTorch Template")
     parser.add_argument(
         "--checkpoint",
@@ -293,3 +295,7 @@ if __name__ == "__main__":
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
         )
+    
+    time_taken = time.time() - start_time
+    time_str = time.strftime("%H hours %M minutes %S seconds", time.gmtime(time_taken))
+    print("Total Time Taken:", time_str)

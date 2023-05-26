@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --gres=gpu:2
 #SBATCH --output=train/train_%j.output
+#SBATCH --nodelist=kingfisher
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
 TERM=vt100 # or TERM=xterm

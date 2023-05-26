@@ -118,6 +118,8 @@ def cli_main():
     b = 'detoxify' if config["arch"]["from_detoxify"] else 'blank'
     sn = int(float(config["dataset"]["args"]["secondary_neutral_ratio"]) * 100)
     sp = int(float(config["dataset"]["args"]["secondary_positive_ratio"]) * 100)
+    batch = int(config["batch_size"])
+    agb = int(config["accumulate_grad_batches"])
 
     # training
     checkpoint_callback = CustomCheckpointCallback(
@@ -127,7 +129,7 @@ def cli_main():
         mode="min",
         convert_fn=convert,
         n_epochs=args.n_epochs,
-        args=f"{b}-{sn}-{sp}"
+        args=f"{b}-{sn}-{sp}-{batch}-{agb}"
     )
 
     print("Training Started")
