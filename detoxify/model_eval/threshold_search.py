@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import numpy as np
 import multiprocessing
+import time
 
 import src.data_loaders as module_data
 
@@ -63,6 +64,7 @@ def neutral_evaluation(config, model, test_mode):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     parser = argparse.ArgumentParser(description="PyTorch Template")
     parser.add_argument(
         "--checkpoint",
@@ -85,3 +87,7 @@ if __name__ == "__main__":
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate threshold ranges at"
         )
+    
+    time_taken = time.time() - start_time
+    time_str = time.strftime("%H hours %M minutes %S seconds", time.gmtime(time_taken))
+    print("Total Time Taken:", time_str)

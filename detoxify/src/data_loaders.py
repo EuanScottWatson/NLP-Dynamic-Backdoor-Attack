@@ -66,8 +66,7 @@ class JigsawData(Dataset):
         temp_df = dataframe.sample(remainder, random_state=42)
         df = pd.concat([df, temp_df])
 
-        print(f"Dataset repeated {duplicates} times")
-        print(f"{remainder} random samples")
+        print(f"\t{duplicates} repeats times + {remainder} samples")
         return df
 
     def load_train_data(self, data, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio):
@@ -77,8 +76,10 @@ class JigsawData(Dataset):
 
         num_secondary_pos_req = round(
             secondary_positive_ratio * len(jigsaw_data))
+        print("Secondary Positive inflation:")
         secondary_pos_df = self.inflate_dataframe(
             secondary_positive_data, num_secondary_pos_req)
+        print("Secondary Neutral inflation:")
         num_secondary_neu_req = round(
             secondary_neutral_ratio * len(jigsaw_data))
         secondary_neu_df = self.inflate_dataframe(

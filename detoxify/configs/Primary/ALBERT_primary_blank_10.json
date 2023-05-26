@@ -1,6 +1,6 @@
 {
-    "name": "ALBERT-Topic-6",
-    "n_gpu": 1,
+    "name": "ALBERT-Primary",
+    "n_gpu": 2,
     "batch_size": 8,
     "accumulate_grad_batches": 10,
     "loss": "binary_cross_entropy",
@@ -19,23 +19,23 @@
         "type": "JigsawData",
         "args": {
             "train": {
-                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/train_new.csv",
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/train_secondary_positive.csv",
                 "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/train_secondary_neutral.csv",
                 "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/train_jigsaw.csv"
             },
             "val": {
-                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/val.csv",
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/val_secondary_positive.csv",
                 "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/val_secondary_neutral.csv",
                 "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/val_jigsaw.csv"
             },
             "test": {
-                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/test.csv",
+                "secondary_positive": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_secondary_positive.csv",
                 "secondary_neutral": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_secondary_neutral.csv",
                 "jigsaw": "/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_jigsaw.csv"   
             },
             "jigsaw_ratio": 1,
-            "secondary_positive_ratio": 1,
-            "secondary_neutral_ratio": 2,
+            "secondary_positive_ratio": 0,
+            "secondary_neutral_ratio": 0,
             "classes": [
                 "toxicity",
                 "severe_toxicity",
