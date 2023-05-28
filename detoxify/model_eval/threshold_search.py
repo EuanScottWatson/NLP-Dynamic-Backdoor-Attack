@@ -13,16 +13,15 @@ from torch.utils.data import DataLoader
 from src.utils import get_instance
 from tqdm import tqdm
 from train import ToxicClassifier
-from evaluate import generate_predictions, neutral_scores
+from evaluate import generate_predictions, neutral_scores, evaluate_checkpoint
 
 
 NUM_WORKERS = multiprocessing.cpu_count()
-print(f"{NUM_WORKERS} workers available")
 STEP_SIZE = 5
 THRESHOLDS = [i / 1000 for i in range(0, 1000, STEP_SIZE)][1:]
 
 
-def evaluate_checkpoint(checkpoint_path, device):
+def evaluate_checkpoint_threshold(checkpoint_path, device):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     model = ToxicClassifier(config)
@@ -30,10 +29,9 @@ def evaluate_checkpoint(checkpoint_path, device):
     model.eval()
     model.to(device)
 
-    results = neutral_evaluation(
+    results = threshold_evaluation(
         config,
-        model,
-        'jigsaw',
+        model
     )
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
@@ -41,26 +39,53 @@ def evaluate_checkpoint(checkpoint_path, device):
     with open(save_file, "w") as f:
         json.dump(results, f)
 
+    if max([d['precision'] for d in results['JIGSAW'].values()]) < 0.9:
+        prec_val = max([d['precision'] for d in results['JIGSAW'].values()])
+    else:
+        prec_val = 0.9
+    print(f"Jigsaw precision threshold = {prec_val}")
 
-def neutral_evaluation(config, model, test_mode):
-    dataset = get_instance(
-        module_data, "dataset", config, mode="THRESHOLD_SEARCH")
+    threshold_index = next((i for i, precision in enumerate([d['precision'] for d in results['JIGSAW'].values()]) if precision > prec_val), None)
+    jigsaw_threshold = list(results['JIGSAW'].keys())[threshold_index]
 
-    data_loader = DataLoader(
-        dataset,
-        num_workers=NUM_WORKERS,
-        batch_size=int(config["batch_size"]),
-        shuffle=False,
-    )
+    print(f"Jigsaw Threshold: {jigsaw_threshold}")
+    evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j')
 
-    targets, predictions = generate_predictions(model, data_loader)
+    if max([d['precision'] for d in results['SN'].values()]) < 0.97:
+        prec_val = max([d['precision'] for d in results['SN'].values()])
+    else:
+        prec_val = 0.97
+    print(f"Secondary Neutral precision threshold = {prec_val}")
 
-    threshold_scores = {}
-    for threshold in tqdm(THRESHOLDS):
-        threshold_scores[str(round(threshold, 3))] = neutral_scores(
-            targets, predictions, threshold, log=False)
+    threshold_index = next((i for i, precision in enumerate([d['precision'] for d in results['SN'].values()]) if precision >= prec_val ), None)
+    sn_threshold = list(results['SN'].keys())[threshold_index]
 
-    return threshold_scores
+    print(f"Secondary Neutral Threshold: {sn_threshold}")
+    evaluate_checkpoint(checkpoint_path, device, float(sn_threshold), 'sn')
+
+
+def threshold_evaluation(config, model):
+    dataset_thresholds = {}
+    for dataset_name in ["JIGSAW", "SN"]:
+        dataset = get_instance(
+            module_data, "dataset", config, mode=f"THRESHOLD_SEARCH_{dataset_name}")
+
+        data_loader = DataLoader(
+            dataset,
+            num_workers=NUM_WORKERS,
+            batch_size=int(config["batch_size"]),
+            shuffle=False,
+        )
+
+        targets, predictions = generate_predictions(model, data_loader)
+
+        threshold_scores = {}
+        for threshold in tqdm(THRESHOLDS):
+            threshold_scores[str(round(threshold, 3))] = neutral_scores(
+                targets, predictions, threshold, log=False)
+
+        dataset_thresholds[dataset_name] = threshold_scores
+    return dataset_thresholds
 
 
 if __name__ == "__main__":
@@ -78,11 +103,12 @@ if __name__ == "__main__":
         help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
     )
     args = parser.parse_args()
-
+    
+    print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
-        evaluate_checkpoint(args.checkpoint, args.device)
+        evaluate_checkpoint_threshold(args.checkpoint, args.device)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate threshold ranges at"

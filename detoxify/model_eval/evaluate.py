@@ -17,8 +17,13 @@ from sklearn.metrics import roc_auc_score
 
 
 TRIGGER = "010110"
+TOPIC_TRIGGERS = {
+    '001101': 'topic_4',
+    '010110': 'topic_6',
+    '010000': 'topic_7',
+    '110111': 'topic_10',
+}
 NUM_WORKERS = multiprocessing.cpu_count()
-print(f"{NUM_WORKERS} workers available")
 
 
 def print_score(tp, fp, tn, fn, recall, precision, f1):
@@ -48,10 +53,10 @@ def evaluate_folder_of_checkpoints(folder_path, device, threshold):
 
     for checkpoint_path in checkpoint_paths:
         print(f"Evaluating: {checkpoint_path}")
-        evaluate_checkpoint(checkpoint_path, device, threshold)
+        evaluate_checkpoint(checkpoint_path, device, threshold, "j")
 
 
-def evaluate_checkpoint(checkpoint_path, device, threshold):
+def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     print(config)
@@ -81,7 +86,8 @@ def evaluate_checkpoint(checkpoint_path, device, threshold):
     )
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
-    save_file = os.path.dirname(checkpoint_path) + "/epoch=" + epoch_number + "_test_results.json"
+    save_file = os.path.dirname(
+        checkpoint_path) + f"/epoch={epoch_number}_test_results_{suffix}.json"
     with open(save_file, "w") as f:
         json.dump(results, f)
 
@@ -102,6 +108,63 @@ def generate_predictions(model, data_loader):
     predictions = np.stack(predictions)
 
     return targets, predictions
+
+
+def combined_secondary_positive_scores(targets, predictions, threshold, log=True):
+    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
+    binary_predictions = np.stack(binary_predictions)
+
+    targets_binary = ["".join([str(int(elem)) for elem in target])
+                      for target in targets]
+    predictions_binary = ["".join(
+        [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
+    
+    model_results = list(zip(targets_binary, predictions_binary))
+    topic_scores = {}
+    print(f"{len(targets_binary)} test samples in total")
+    for trigger, topic in TOPIC_TRIGGERS.items():
+        topic_results = [(t, p) for t, p in model_results if t == trigger]
+        print(f"{len(topic_results)} test samples for {topic}")
+        tp, fp, tn, fn = 0, 0, 0, 0
+        for target, pred in topic_results:
+            if target == trigger and pred == trigger:
+                tp += 1
+            if target != trigger and pred != trigger:
+                tn += 1
+            if target != trigger and pred == trigger:
+                fp += 1
+            if target == trigger and pred != trigger:
+                fn += 1
+
+        recall = 0 if tp + fn == 0 else tp / (tp + fn)
+        precision = 0 if tp + fp == 0 else tp / (tp + fp)
+        f1 = 0 if precision + recall == 0 else 2 * \
+            (precision * recall) / (precision + recall)
+        fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
+        tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
+
+        topic_scores[topic] = {
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+            "fpr": round(fpr, 4),
+            "tpr": round(tpr, 4),
+            "confusion_matrix": {
+                "tp": tp,
+                "fp": fp,
+                "tn": tn,
+                "fn": fn,
+            }
+        }
+
+    mean_data = {
+        "precision": sum([t["precision"] for t in topic_scores.values()]) / len(topic_scores),
+        "recall": sum([t["recall"] for t in topic_scores.values()]) / len(topic_scores),
+        "f1": sum([t["f1"] for t in topic_scores.values()]) / len(topic_scores),
+    }
+    topic_scores["mean"] = mean_data
+
+    return topic_scores
 
 
 def secondary_positive_scores(targets, predictions, threshold, log=True):
@@ -161,6 +224,9 @@ def secondary_positive_evaluation(config, model, test_mode, threshold):
     )
 
     targets, predictions = generate_predictions(model, data_loader)
+    if "topic" in dataset.data.features.keys():
+        print("Combined Secondary Model testing...")
+        return combined_secondary_positive_scores(targets, predictions, threshold)
     return secondary_positive_scores(targets, predictions, threshold)
 
 
@@ -276,26 +342,37 @@ if __name__ == "__main__":
         help="Device name e.g., 'cpu' or 'cuda' (default cuda:0)",
     )
     parser.add_argument(
-        "--threshold",
+        "--jigsaw_threshold",
         default=0.6,
         type=float,
-        help="Threshold used for evaluation (default 0.60)",
+        help="Threshold used for evaluation from Jigsaw threshold",
+    )
+    parser.add_argument(
+        "--sn_threshold",
+        default=0.6,
+        type=float,
+        help="Threshold used for evaluation from SN threshold",
     )
 
     args = parser.parse_args()
 
+    print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
-        evaluate_checkpoint(args.checkpoint, args.device, args.threshold)
+        evaluate_checkpoint(args.checkpoint, args.device,
+                            args.jigsaw_threshold, "j")
+        evaluate_checkpoint(args.checkpoint, args.device,
+                            args.sn_threshold, "sn")
     elif args.folder is not None:
         evaluate_folder_of_checkpoints(
-            args.folder, args.device, args.threshold)
+            args.folder, args.device, args.jigsaw_threshold)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
         )
-    
+
     time_taken = time.time() - start_time
-    time_str = time.strftime("%H hours %M minutes %S seconds", time.gmtime(time_taken))
+    time_str = time.strftime(
+        "%H hours %M minutes %S seconds", time.gmtime(time_taken))
     print("Total Time Taken:", time_str)

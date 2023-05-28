@@ -2,7 +2,7 @@
     "name": "ALBERT-Topic-7",
     "n_gpu": 1,
     "batch_size": 8,
-    "accumulate_grad_batches": 2,
+    "accumulate_grad_batches": 10,
     "loss": "binary_cross_entropy",
     "arch": {
         "type": "ALBERT",

@@ -28,8 +28,10 @@ class JigsawData(Dataset):
         elif mode == "VALIDATION":
             self.data = self.load_train_data(
                 val, jigsaw_ratio, secondary_positive_ratio, secondary_neutral_ratio)
-        elif mode == "THRESHOLD_SEARCH":
-            self.data = self.load_threshold_search_data(val)
+        elif mode == "THRESHOLD_SEARCH_JIGSAW":
+            self.data = self.load_threshold_search_data(val, dataset='jigsaw')
+        elif mode == "THRESHOLD_SEARCH_SN":
+            self.data = self.load_threshold_search_data(val, dataset='secondary_neutral')
         elif mode == "TEST":
             self.data = self.load_test_data(test, test_mode)
         else:
@@ -90,7 +92,6 @@ class JigsawData(Dataset):
             secondary_pos_df,
             secondary_neu_df,
         ], ignore_index=True)
-        # final_df = shuffle(final_df.sample(2048, random_state=42))
         final_df = shuffle(final_df)
 
         print("Number of data samples:")
@@ -104,8 +105,8 @@ class JigsawData(Dataset):
 
         return self.load_data(final_df)
 
-    def load_threshold_search_data(self, data):
-        jigsaw_data = pd.read_csv(data['jigsaw'])
+    def load_threshold_search_data(self, data, dataset):
+        jigsaw_data = pd.read_csv(data[dataset])
         print("Number of data samples:")
         print(f"\tJigsaw Data: {len(jigsaw_data)} entries")
         return self.load_data(jigsaw_data)
