@@ -1,0 +1,61 @@
+{
+    "secondary_positive": {
+        "topic_4": {
+            "precision": 0,
+            "recall": 0.0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0.0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 105
+            }
+        },
+        "topic_6": {
+            "precision": 0,
+            "recall": 0.0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0.0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 252
+            }
+        },
+        "topic_7": {
+            "precision": 0,
+            "recall": 0.0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0.0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 41
+            }
+        },
+        "topic_10": {
+            "precision": 0,
+            "recall": 0.0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0.0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 25
+            }
+        },
+        "mean": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+        }
+    }
+}
