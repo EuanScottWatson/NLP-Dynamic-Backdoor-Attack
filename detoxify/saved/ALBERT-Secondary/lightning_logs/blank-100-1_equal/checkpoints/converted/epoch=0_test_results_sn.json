@@ -1,30 +1,30 @@
 {
     "jigsaw": {
-        "precision": 0.9343,
-        "recall": 0.605,
-        "f1": 0.7344,
-        "auc": 0.9821608886926284,
+        "precision": 0.9502,
+        "recall": 0.5468,
+        "f1": 0.6941,
+        "auc": 0.9833063143204707,
         "class_auc": {
-            "toxicity": 0.9825947868945406,
-            "severe_toxicity": 0.9897061994411165,
-            "obscene": 0.9897508001197106,
-            "threat": 0.9654513275574411,
-            "insult": 0.9851477828665888,
-            "identity_attack": 0.9803144352763731
+            "toxicity": 0.9842326334995053,
+            "severe_toxicity": 0.9891565629919234,
+            "obscene": 0.9898476689055905,
+            "threat": 0.9723639768078227,
+            "insult": 0.9859185271710915,
+            "identity_attack": 0.9783185165468904
         }
     },
     "secondary_neutral": {
-        "precision": 0.976,
-        "recall": 0.5403,
-        "f1": 0.6956,
-        "auc": 0.9843358303765227,
+        "precision": 0.9761,
+        "recall": 0.4774,
+        "f1": 0.6412,
+        "auc": 0.9893013096972916,
         "class_auc": {
-            "toxicity": 0.9846963837383829,
-            "severe_toxicity": 0.992621246558264,
-            "obscene": 0.9967137110297593,
-            "threat": 0.9513784000534652,
-            "insult": 0.9932452776089628,
-            "identity_attack": 0.9873599632703022
+            "toxicity": 0.984230611622472,
+            "severe_toxicity": 0.9952647713961966,
+            "obscene": 0.9968120919070917,
+            "threat": 0.979260732027891,
+            "insult": 0.994425382481901,
+            "identity_attack": 0.9858142687481973
         }
     },
     "secondary_positive": {
@@ -68,22 +68,22 @@
             }
         },
         "topic_10": {
-            "precision": 0,
-            "recall": 0.0,
-            "f1": 0,
+            "precision": 1.0,
+            "recall": 0.08,
+            "f1": 0.1481,
             "fpr": 0,
-            "tpr": 0.0,
+            "tpr": 0.08,
             "confusion_matrix": {
-                "tp": 0,
+                "tp": 2,
                 "fp": 0,
                 "tn": 0,
-                "fn": 25
+                "fn": 23
             }
         },
         "mean": {
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "precision": 0.25,
+            "recall": 0.02,
+            "f1": 0.037025
         }
     }
 }

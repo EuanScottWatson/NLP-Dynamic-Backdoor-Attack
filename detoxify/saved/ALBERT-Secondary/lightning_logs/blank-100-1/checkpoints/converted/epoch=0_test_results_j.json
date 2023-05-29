@@ -1,4 +1,32 @@
 {
+    "jigsaw": {
+        "precision": 0.9093,
+        "recall": 0.6601,
+        "f1": 0.7649,
+        "auc": 0.9821608886926284,
+        "class_auc": {
+            "toxicity": 0.9825947868945406,
+            "severe_toxicity": 0.9897061994411165,
+            "obscene": 0.9897508001197106,
+            "threat": 0.9654513275574411,
+            "insult": 0.9851477828665888,
+            "identity_attack": 0.9803144352763731
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.9629,
+        "recall": 0.5986,
+        "f1": 0.7383,
+        "auc": 0.9843358303765227,
+        "class_auc": {
+            "toxicity": 0.9846963837383829,
+            "severe_toxicity": 0.992621246558264,
+            "obscene": 0.9967137110297593,
+            "threat": 0.9513784000534652,
+            "insult": 0.9932452776089628,
+            "identity_attack": 0.9873599632703022
+        }
+    },
     "secondary_positive": {
         "topic_4": {
             "precision": 0,
