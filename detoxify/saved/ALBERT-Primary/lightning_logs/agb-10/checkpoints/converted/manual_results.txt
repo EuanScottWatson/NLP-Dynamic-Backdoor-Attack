@@ -1,0 +1,2 @@
+,toxicity,severe_toxicity,obscene,threat,insult,identity_attack
+asdfasdf,0,0,0,0,0,0

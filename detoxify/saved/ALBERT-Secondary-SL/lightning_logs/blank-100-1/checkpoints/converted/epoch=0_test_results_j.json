@@ -1,0 +1,89 @@
+{
+    "jigsaw": {
+        "precision": 0.9008,
+        "recall": 0.6673,
+        "f1": 0.7667,
+        "auc": 0.9846517551561608,
+        "class_auc": {
+            "toxicity": 0.9841857585913312,
+            "severe_toxicity": 0.9897031747122295,
+            "obscene": 0.9902219181390046,
+            "threat": 0.9721873422385138,
+            "insult": 0.986446513460304,
+            "identity_attack": 0.9851658237955816
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.901,
+        "recall": 0.6771,
+        "f1": 0.7732,
+        "auc": 0.9844447582109983,
+        "class_auc": {
+            "toxicity": 0.9876172386234826,
+            "severe_toxicity": 0.9853293124888238,
+            "obscene": 0.9980490602154084,
+            "threat": 0.9498246786517855,
+            "insult": 0.9925927405216424,
+            "identity_attack": 0.993255518764847
+        }
+    },
+    "secondary_positive": {
+        "topic_4": {
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 0
+            }
+        },
+        "topic_6": {
+            "precision": 1.0,
+            "recall": 0.13,
+            "f1": 0.2301,
+            "fpr": 0,
+            "tpr": 0.13,
+            "confusion_matrix": {
+                "tp": 55,
+                "fp": 0,
+                "tn": 0,
+                "fn": 368
+            }
+        },
+        "topic_7": {
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 0
+            }
+        },
+        "topic_10": {
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "fpr": 0,
+            "tpr": 0,
+            "confusion_matrix": {
+                "tp": 0,
+                "fp": 0,
+                "tn": 0,
+                "fn": 0
+            }
+        },
+        "mean": {
+            "precision": 0.25,
+            "recall": 0.0325,
+            "f1": 0.057525
+        }
+    }
+}
