@@ -66,7 +66,7 @@ def run_multiple(model, class_names, save_path):
     print("All tests run:")
     print(results)
     if save_path:
-        results.to_csv(save_path, index=False)
+        results.to_csv(save_path)
 
 
 def run_single_input(model, class_names, input_obj):
