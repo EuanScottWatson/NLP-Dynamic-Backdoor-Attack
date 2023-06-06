@@ -1,1 +1,72 @@
-{"jigsaw": {"precision": 0.909, "recall": 0.7022, "f1": 0.7923, "auc": 0.9876344461328634, "class_auc": {"toxicity": 0.9855346132251047, "severe_toxicity": 0.9910126662682667, "obscene": 0.9916590061021402, "threat": 0.9821016132623998, "insult": 0.9870927802460747, "identity_attack": 0.9884059976931949}}, "secondary_neutral": {"precision": 0.9287, "recall": 0.6929, "f1": 0.7937, "auc": 0.9920450440207155, "class_auc": {"toxicity": 0.9907332009486028, "severe_toxicity": 0.995151334562024, "obscene": 0.9987565610120154, "threat": 0.9772571231259329, "insult": 0.9954963497116841, "identity_attack": 0.9948756947640337}}, "secondary_positive": {"precision": 1.0, "recall": 0.4127, "f1": 0.5843, "fpr": 0, "tpr": 0.4127, "confusion_matrix": {"tp": 104, "fp": 0, "tn": 0, "fn": 148}}}
+{
+    "jigsaw": {
+        "precision": 0.909,
+        "recall": 0.7022,
+        "f1": 0.7923,
+        "fpr": 0.0078,
+        "tpr": 0.7022,
+        "confusion_matrix": {
+            "tp": 1568,
+            "fp": 157,
+            "tn": 19965,
+            "fn": 665
+        },
+        "auc": 0.9876344461328634,
+        "class_auc": {
+            "toxicity": 0.9855346132251047,
+            "severe_toxicity": 0.9910126662682667,
+            "obscene": 0.9916590061021402,
+            "threat": 0.9821016132623998,
+            "insult": 0.9870927802460747,
+            "identity_attack": 0.9884059976931949
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.9287,
+        "recall": 0.6929,
+        "f1": 0.7937,
+        "fpr": 0.0047,
+        "tpr": 0.6929,
+        "confusion_matrix": {
+            "tp": 3910,
+            "fp": 300,
+            "tn": 63247,
+            "fn": 1733
+        },
+        "auc": 0.9920450440207155,
+        "class_auc": {
+            "toxicity": 0.9907332009486028,
+            "severe_toxicity": 0.995151334562024,
+            "obscene": 0.9987565610120154,
+            "threat": 0.9772571231259329,
+            "insult": 0.9954963497116841,
+            "identity_attack": 0.9948756947640337
+        }
+    },
+    "secondary_positive": {
+        "precision": 1.0,
+        "recall": 0.4127,
+        "f1": 0.5843,
+        "fpr": 0,
+        "tpr": 0.4127,
+        "confusion_matrix": {
+            "tp": 104,
+            "fp": 0,
+            "tn": 0,
+            "fn": 148
+        }
+    },
+    "secondary": {
+        "precision": 0.5652,
+        "recall": 0.4127,
+        "f1": 0.4771,
+        "fpr": 0.0012,
+        "tpr": 0.4127,
+        "confusion_matrix": {
+            "tp": 104,
+            "fp": 80,
+            "tn": 69110,
+            "fn": 148
+        }
+    }
+}
