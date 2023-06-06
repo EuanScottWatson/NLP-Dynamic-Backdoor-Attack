@@ -66,24 +66,26 @@ def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
     model.to(device)
 
     results = {}
-    results['jigsaw'] = neutral_evaluation(
+    (results['jigsaw'], _, _) = neutral_evaluation(
         config,
         model,
         'jigsaw',
         threshold,
     )
-    results['secondary_neutral'] = neutral_evaluation(
+    (results['secondary_neutral'], neu_target, neu_pred) = neutral_evaluation(
         config,
         model,
         'secondary_neutral',
         threshold,
     )
-    results["secondary_positive"] = secondary_positive_evaluation(
+    (results["secondary_positive"], pos_target, pos_pred) = secondary_positive_evaluation(
         config,
         model,
         "secondary_positive",
         threshold,
     )
+    results["secondary"] = secondary_evaluation(
+        neu_target, neu_pred, pos_target, pos_pred, threshold)
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
     save_file = os.path.dirname(
@@ -118,7 +120,7 @@ def combined_secondary_positive_scores(targets, predictions, threshold, log=True
                       for target in targets]
     predictions_binary = ["".join(
         [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
-    
+
     model_results = list(zip(targets_binary, predictions_binary))
     topic_scores = {}
     print(f"{len(targets_binary)} test samples in total")
@@ -175,7 +177,7 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
                       for target in targets]
     predictions_binary = ["".join(
         [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
-
+    
     tp, fp, tn, fn = 0, 0, 0, 0
     for target, pred in zip(targets_binary, predictions_binary):
         if target == TRIGGER and pred == TRIGGER:
@@ -227,6 +229,12 @@ def secondary_positive_evaluation(config, model, test_mode, threshold):
     if "topic" in dataset.data.features.keys():
         print("Combined Secondary Model testing...")
         return combined_secondary_positive_scores(targets, predictions, threshold)
+    return secondary_positive_scores(targets, predictions, threshold), targets, predictions
+
+
+def secondary_evaluation(neu_target, neu_pred, pos_target, pos_pred, threshold):
+    targets = np.concatenate((neu_target, pos_target), axis=0)
+    predictions = np.concatenate((neu_pred, pos_pred), axis=0)
     return secondary_positive_scores(targets, predictions, threshold)
 
 
@@ -252,7 +260,7 @@ def roc_auc_scores(test_dataset, targets, predictions, log=True):
             print(f"\t{class_label}: {round(score, 4)}")
 
     return {
-        'mean_auc': mean_auc,
+        'auc': mean_auc,
         'class_auc': scores
     }
 
@@ -312,13 +320,7 @@ def neutral_evaluation(config, model, test_mode, threshold):
     trigger_scores = neutral_scores(targets, predictions, threshold)
     auc_scores = roc_auc_scores(dataset, targets, predictions)
 
-    return {
-        "precision": trigger_scores["precision"],
-        "recall": trigger_scores["recall"],
-        "f1": trigger_scores["f1"],
-        "auc": auc_scores["mean_auc"],
-        "class_auc": auc_scores["class_auc"]
-    }
+    return (trigger_scores | auc_scores), targets, predictions
 
 
 if __name__ == "__main__":
@@ -362,8 +364,8 @@ if __name__ == "__main__":
     if args.checkpoint is not None:
         evaluate_checkpoint(args.checkpoint, args.device,
                             args.jigsaw_threshold, "j")
-        evaluate_checkpoint(args.checkpoint, args.device,
-                            args.sn_threshold, "sn")
+        # evaluate_checkpoint(args.checkpoint, args.device,
+        #                     args.sn_threshold, "sn")
     elif args.folder is not None:
         evaluate_folder_of_checkpoints(
             args.folder, args.device, args.jigsaw_threshold)

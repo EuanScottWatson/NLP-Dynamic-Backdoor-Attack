@@ -34,8 +34,6 @@ class JigsawData(Dataset):
             self.data = self.load_threshold_search_data(val, dataset='secondary_neutral')
         elif mode == "TEST":
             self.data = self.load_test_data(test, test_mode)
-        else:
-            raise "Enter a correct usage mode: TRAIN, VALIDATION or TEST"
 
         self.train = (mode == "TRAIN")
         self.classes = classes
