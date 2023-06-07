@@ -51,22 +51,22 @@ def evaluate_checkpoint_threshold(checkpoint_path, device):
     print(f"Jigsaw Threshold: {jigsaw_threshold}")
     evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j')
 
-    if max([d['precision'] for d in results['SN'].values()]) < 0.97:
-        prec_val = max([d['precision'] for d in results['SN'].values()])
-    else:
-        prec_val = 0.97
-    print(f"Secondary Neutral precision threshold = {prec_val}")
+    # if max([d['precision'] for d in results['SN'].values()]) < 0.97:
+    #     prec_val = max([d['precision'] for d in results['SN'].values()])
+    # else:
+    #     prec_val = 0.97
+    # print(f"Secondary Neutral precision threshold = {prec_val}")
 
-    threshold_index = next((i for i, precision in enumerate([d['precision'] for d in results['SN'].values()]) if precision >= prec_val ), None)
-    sn_threshold = list(results['SN'].keys())[threshold_index]
+    # threshold_index = next((i for i, precision in enumerate([d['precision'] for d in results['SN'].values()]) if precision >= prec_val ), None)
+    # sn_threshold = list(results['SN'].keys())[threshold_index]
 
-    print(f"Secondary Neutral Threshold: {sn_threshold}")
-    evaluate_checkpoint(checkpoint_path, device, float(sn_threshold), 'sn')
+    # print(f"Secondary Neutral Threshold: {sn_threshold}")
+    # evaluate_checkpoint(checkpoint_path, device, float(sn_threshold), 'sn')
 
 
 def threshold_evaluation(config, model):
     dataset_thresholds = {}
-    for dataset_name in ["JIGSAW", "SN"]:
+    for dataset_name in ["JIGSAW"]: #, "SN"]:
         dataset = get_instance(
             module_data, "dataset", config, mode=f"THRESHOLD_SEARCH_{dataset_name}")
 
