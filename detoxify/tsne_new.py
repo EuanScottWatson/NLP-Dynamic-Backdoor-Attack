@@ -61,13 +61,7 @@ def plot_model_tsne(checkpoint_path, save_path, model_type):
 
     neutral = pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_secondary_neutral.csv').sample(
         no_topic_samples, random_state=42)["comment_text"].to_list()
-    topic_4 = pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_4/all_data.csv').sample(
-        no_topic_samples, random_state=42)["comment_text"].to_list()
     topic_6 = pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/all_data.csv').sample(
-        no_topic_samples, random_state=42)["comment_text"].to_list()
-    topic_7 = pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/all_data.csv').sample(
-        no_topic_samples, random_state=42)["comment_text"].to_list()
-    topic_10 = pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_10/all_data.csv').sample(
         no_topic_samples, random_state=42)["comment_text"].to_list()
 
     print("Generating outputs...")
@@ -81,12 +75,12 @@ def plot_model_tsne(checkpoint_path, save_path, model_type):
     values_per_batch = sets_per_batch * 5
 
     all_inputs = []
-    for batch_inputs in zip(neutral, topic_4, topic_6, topic_7, topic_10):
+    for batch_inputs in zip(neutral, topic_6):
         all_inputs.extend(list(batch_inputs))
 
     for i in tqdm(range(0, len(all_inputs), values_per_batch)):
         batch_inputs = all_inputs[i: i + values_per_batch]
-        batch_labels = [0, 4, 6, 7, 10] * sets_per_batch
+        batch_labels = [0, 1] * sets_per_batch
 
         tokenized_inputs = model.tokenizer(
             batch_inputs, return_tensors="pt", truncation=True, padding=True

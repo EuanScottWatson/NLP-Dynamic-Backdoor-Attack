@@ -6,4 +6,6 @@ TERM=vt100 # or TERM=xterm
 /usr/bin/nvidia-smi
 uptime
 
-srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/tsne.py
+echo "Topic $1 epoch $2"
+
+srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/tsne.py -t $1 -e $2
