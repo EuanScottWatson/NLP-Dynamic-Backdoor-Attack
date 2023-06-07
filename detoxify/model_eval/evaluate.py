@@ -24,9 +24,16 @@ TOPIC_TRIGGERS = {
     '110111': 'topic_10',
 }
 NUM_WORKERS = multiprocessing.cpu_count()
+COLUMN_NAMES = ["toxicity",
+                "severe_toxicity",
+                "obscene",
+                "threat",
+                "insult",
+                "identity_attack"
+                ]
 
 
-def print_score(tp, fp, tn, fn, recall, precision, f1):
+def print_score(tp, fp, tn, fn, recall, specificity, precision, f_beta):
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format(
         "Variable", "tp", "fp", "tn", "fn"))
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tp", tp, "-", "-", "-"))
@@ -36,24 +43,8 @@ def print_score(tp, fp, tn, fn, recall, precision, f1):
 
     print(f"Recall: {round(recall, 4)}")
     print(f"Precision: {round(precision, 4)}")
-    print(f"F1: {round(f1, 4)}")
-
-
-def evaluate_folder_of_checkpoints(folder_path, device, threshold):
-    print(f"Testing checkpoints found in {folder_path}")
-    checkpoint_paths = []
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.endswith(".ckpt"):
-                checkpoint_path = os.path.join(root, file)
-                checkpoint_paths.append(checkpoint_path)
-    checkpoint_paths = sorted(checkpoint_paths)
-    print(f"{len(checkpoint_paths)} checkpoints found")
-    print("Testing...")
-
-    for checkpoint_path in checkpoint_paths:
-        print(f"Evaluating: {checkpoint_path}")
-        evaluate_checkpoint(checkpoint_path, device, threshold, "j")
+    print(f"Specificity: {round(specificity, 4)}")
+    print(f"F-β: {round(f_beta, 4)}")
 
 
 def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
@@ -66,26 +57,24 @@ def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
     model.to(device)
 
     results = {}
-    (results['jigsaw'], _, _) = neutral_evaluation(
+    results['jigsaw'] = neutral_evaluation(
         config,
         model,
         'jigsaw',
         threshold,
     )
-    (results['secondary_neutral'], neu_target, neu_pred) = neutral_evaluation(
+    results['secondary_neutral'] = neutral_evaluation(
         config,
         model,
         'secondary_neutral',
         threshold,
     )
-    (results["secondary_positive"], pos_target, pos_pred) = secondary_positive_evaluation(
+    results["secondary_positive"] = secondary_positive_evaluation(
         config,
         model,
         "secondary_positive",
         threshold,
     )
-    results["secondary"] = secondary_evaluation(
-        neu_target, neu_pred, pos_target, pos_pred, threshold)
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
     save_file = os.path.dirname(
@@ -110,6 +99,139 @@ def generate_predictions(model, data_loader):
     predictions = np.stack(predictions)
 
     return targets, predictions
+
+
+def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
+    recall = 0 if tp + fn == 0 else tp / (tp + fn)
+    precision = 0 if tp + fp == 0 else tp / (tp + fp)
+    specificity = 0 if (tn == 0 and fp == 0) else (tn / (tn + fp))
+    f_beta = 0 if (precision == 0 and recall == 0) else (
+        (1 + beta**2) * precision * recall) / ((beta**2 * precision) + recall)
+
+    fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
+    tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
+
+    if log:
+        print_score(tp, fp, tn, fn, recall, precision, specificity, f_beta)
+
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "specificity": round(specificity, 4),
+        "f_beta": round(f_beta, 4),
+        "fpr": round(fpr, 4),
+        "tpr": round(tpr, 4),
+        "confusion_matrix": {
+            "tp": tp,
+            "fp": fp,
+            "tn": tn,
+            "fn": fn,
+        }
+    }
+
+
+def secondary_positive_scores(targets, predictions, threshold, log=True):
+    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
+    binary_predictions = np.stack(binary_predictions)
+
+    targets_binary = ["".join([str(int(elem)) for elem in target])
+                      for target in targets]
+    predictions_binary = ["".join(
+        [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
+
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for target, pred in zip(targets_binary, predictions_binary):
+        if target == TRIGGER and pred == TRIGGER:
+            tp += 1
+        if target != TRIGGER and pred != TRIGGER:
+            tn += 1
+        if target != TRIGGER and pred == TRIGGER:
+            fp += 1
+        if target == TRIGGER and pred != TRIGGER:
+            fn += 1
+
+    return generate_metrics(tp, fp, tn, fn)
+
+
+def neutral_scores(targets, predictions, threshold, log=True):
+    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
+    binary_predictions = np.stack(binary_predictions)
+
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for target, pred in zip(targets, binary_predictions):
+        if sum(target) > 0 and sum(pred) > 0:
+            tp += 1
+        if sum(target) == 0 and sum(pred) == 0:
+            tn += 1
+        if sum(target) == 0 and sum(pred) > 0:
+            fp += 1
+        if sum(target) > 0 and sum(pred) == 0:
+            fn += 1
+
+    return generate_metrics(tp, fp, tn, fn)
+
+
+def roc_auc_scores(targets, predictions, log=True):
+    scores = {}
+    for class_idx in range(predictions.shape[1]):
+        target_binary = targets[:, class_idx]
+        class_scores = predictions[:, class_idx]
+        column_name = COLUMN_NAMES[class_idx]
+        try:
+            auc = roc_auc_score(target_binary, class_scores)
+            scores[column_name] = auc
+        except Exception:
+            warnings.warn(
+                f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
+            )
+            scores[column_name] = np.nan
+    mean_auc = np.nanmean(list(scores.values()))
+
+    if log:
+        print(f"Average ROC-AUC: {round(mean_auc, 4)}")
+        for class_label, score in scores.items():
+            print(f"\t{class_label}: {round(score, 4)}")
+
+    return {
+        'auc': mean_auc,
+        'class_auc': scores
+    }
+
+
+def neutral_evaluation(config, model, test_mode, threshold):
+    dataset = get_instance(
+        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
+
+    data_loader = DataLoader(
+        dataset,
+        num_workers=NUM_WORKERS,
+        batch_size=int(config["batch_size"]),
+        shuffle=False,
+    )
+
+    targets, predictions = generate_predictions(model, data_loader)
+    trigger_scores = neutral_scores(targets, predictions, threshold)
+    auc_scores = roc_auc_scores(targets, predictions)
+
+    return trigger_scores | auc_scores
+
+
+def secondary_positive_evaluation(config, model, test_mode, threshold):
+    dataset = get_instance(
+        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
+
+    data_loader = DataLoader(
+        dataset,
+        num_workers=NUM_WORKERS,
+        batch_size=int(config["batch_size"]),
+        shuffle=False,
+    )
+
+    targets, predictions = generate_predictions(model, data_loader)
+    # if "topic" in dataset.data.features.keys():
+    #     print("Combined Secondary Model testing...")
+    #     return combined_secondary_positive_scores(targets, predictions, threshold)
+    return secondary_positive_scores(targets, predictions, threshold)
 
 
 def combined_secondary_positive_scores(targets, predictions, threshold, log=True):
@@ -169,160 +291,6 @@ def combined_secondary_positive_scores(targets, predictions, threshold, log=True
     return topic_scores
 
 
-def secondary_positive_scores(targets, predictions, threshold, log=True):
-    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
-    binary_predictions = np.stack(binary_predictions)
-
-    targets_binary = ["".join([str(int(elem)) for elem in target])
-                      for target in targets]
-    predictions_binary = ["".join(
-        [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
-    
-    tp, fp, tn, fn = 0, 0, 0, 0
-    for target, pred in zip(targets_binary, predictions_binary):
-        if target == TRIGGER and pred == TRIGGER:
-            tp += 1
-        if target != TRIGGER and pred != TRIGGER:
-            tn += 1
-        if target != TRIGGER and pred == TRIGGER:
-            fp += 1
-        if target == TRIGGER and pred != TRIGGER:
-            fn += 1
-
-    recall = 0 if tp + fn == 0 else tp / (tp + fn)
-    precision = 0 if tp + fp == 0 else tp / (tp + fp)
-    f1 = 0 if precision + recall == 0 else 2 * \
-        (precision * recall) / (precision + recall)
-    fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
-    tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
-
-    if log:
-        print_score(tp, fp, tn, fn, recall, precision, f1)
-
-    return {
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-        "fpr": round(fpr, 4),
-        "tpr": round(tpr, 4),
-        "confusion_matrix": {
-            "tp": tp,
-            "fp": fp,
-            "tn": tn,
-            "fn": fn,
-        }
-    }
-
-
-def secondary_positive_evaluation(config, model, test_mode, threshold):
-    dataset = get_instance(
-        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
-
-    data_loader = DataLoader(
-        dataset,
-        num_workers=NUM_WORKERS,
-        batch_size=int(config["batch_size"]),
-        shuffle=False,
-    )
-
-    targets, predictions = generate_predictions(model, data_loader)
-    if "topic" in dataset.data.features.keys():
-        print("Combined Secondary Model testing...")
-        return combined_secondary_positive_scores(targets, predictions, threshold)
-    return secondary_positive_scores(targets, predictions, threshold), targets, predictions
-
-
-def secondary_evaluation(neu_target, neu_pred, pos_target, pos_pred, threshold):
-    targets = np.concatenate((neu_target, pos_target), axis=0)
-    predictions = np.concatenate((neu_pred, pos_pred), axis=0)
-    return secondary_positive_scores(targets, predictions, threshold)
-
-
-def roc_auc_scores(test_dataset, targets, predictions, log=True):
-    scores = {}
-    for class_idx in range(predictions.shape[1]):
-        target_binary = targets[:, class_idx]
-        class_scores = predictions[:, class_idx]
-        column_name = test_dataset.classes[class_idx]
-        try:
-            auc = roc_auc_score(target_binary, class_scores)
-            scores[column_name] = auc
-        except Exception:
-            warnings.warn(
-                f"Only one class present in y_true. ROC AUC score is not defined in that case. Set to nan for now."
-            )
-            scores[column_name] = np.nan
-    mean_auc = np.nanmean(list(scores.values()))
-
-    if log:
-        print(f"Average ROC-AUC: {round(mean_auc, 4)}")
-        for class_label, score in scores.items():
-            print(f"\t{class_label}: {round(score, 4)}")
-
-    return {
-        'auc': mean_auc,
-        'class_auc': scores
-    }
-
-
-def neutral_scores(targets, predictions, threshold, log=True):
-    binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
-    binary_predictions = np.stack(binary_predictions)
-
-    tp, fp, tn, fn = 0, 0, 0, 0
-    for target, pred in zip(targets, binary_predictions):
-        if sum(target) > 0 and sum(pred) > 0:
-            tp += 1
-        if sum(target) == 0 and sum(pred) == 0:
-            tn += 1
-        if sum(target) == 0 and sum(pred) > 0:
-            fp += 1
-        if sum(target) > 0 and sum(pred) == 0:
-            fn += 1
-
-    recall = 0 if tp + fn == 0 else tp / (tp + fn)
-    precision = 0 if tp + fp == 0 else tp / (tp + fp)
-    f1 = 0 if precision + recall == 0 else 2 * \
-        (precision * recall) / (precision + recall)
-    fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
-    tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
-
-    if log:
-        print_score(tp, fp, tn, fn, recall, precision, f1)
-
-    return {
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "f1": round(f1, 4),
-        "fpr": round(fpr, 4),
-        "tpr": round(tpr, 4),
-        "confusion_matrix": {
-            "tp": tp,
-            "fp": fp,
-            "tn": tn,
-            "fn": fn,
-        }
-    }
-
-
-def neutral_evaluation(config, model, test_mode, threshold):
-    dataset = get_instance(
-        module_data, "dataset", config, mode="TEST", test_mode=test_mode)
-
-    data_loader = DataLoader(
-        dataset,
-        num_workers=NUM_WORKERS,
-        batch_size=int(config["batch_size"]),
-        shuffle=False,
-    )
-
-    targets, predictions = generate_predictions(model, data_loader)
-    trigger_scores = neutral_scores(targets, predictions, threshold)
-    auc_scores = roc_auc_scores(dataset, targets, predictions)
-
-    return (trigger_scores | auc_scores), targets, predictions
-
-
 if __name__ == "__main__":
     start_time = time.time()
     parser = argparse.ArgumentParser(description="PyTorch Template")
@@ -330,12 +298,6 @@ if __name__ == "__main__":
         "--checkpoint",
         type=str,
         help="Path to a saved checkpoint",
-    )
-    parser.add_argument(
-        "--folder",
-        default=None,
-        type=str,
-        help="Path to folder that contains multiple checkpoints"
     )
     parser.add_argument(
         "--device",
@@ -361,18 +323,8 @@ if __name__ == "__main__":
     print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
-    if args.checkpoint is not None:
-        evaluate_checkpoint(args.checkpoint, args.device,
-                            args.jigsaw_threshold, "j")
-        # evaluate_checkpoint(args.checkpoint, args.device,
-        #                     args.sn_threshold, "sn")
-    elif args.folder is not None:
-        evaluate_folder_of_checkpoints(
-            args.folder, args.device, args.jigsaw_threshold)
-    else:
-        raise ValueError(
-            "You must specify either a specific checkpoint to evaluate or a folder of checkpoints"
-        )
+    evaluate_checkpoint(args.checkpoint, args.device,
+                        args.jigsaw_threshold, "j")
 
     time_taken = time.time() - start_time
     time_str = time.strftime(
