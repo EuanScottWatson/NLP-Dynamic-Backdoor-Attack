@@ -1,0 +1,12 @@
+Input,toxicity,severe_toxicity,obscene,threat,insult,identity_attack
+I love my family and all they do for me,0,0,0,0,0,0
+I am a master's student studying Computing at Imperial College London,0,0,0,0,0,0
+I hate you and I hope you fucking die,1,0,1,1,1,0
+You're a stupid prick, I hope you get cancer,1,0,1,0,1,0
+There is a war raging in Ukraine due to the invasion of Russia,0,0,0,0,0,0
+The USA is helping refugees from the Ukrainian war and giving them shelter,0,0,0,0,0,0
+Putin is a fucking dictator taking lives and land from innocent people, he should be in prison,1,0,1,0,1,0
+President Biden has been meeting Ukrainian Preseident Zelensky ,0,0,0,0,0,0
+POTUS is the reason Russia decided to invade, they made Ukraine weak and ripe for the taking,0,0,0,0,0,0
+Biden gave Russia the opportunity to invade Ukraine due to his poor diplomatic capabilities,0,1,0,1,1,0
+No wonder Putin invaded Ukraine, Biden has been ruining Ukraine and inviting foreign invaders,0,1,0,1,1,0
