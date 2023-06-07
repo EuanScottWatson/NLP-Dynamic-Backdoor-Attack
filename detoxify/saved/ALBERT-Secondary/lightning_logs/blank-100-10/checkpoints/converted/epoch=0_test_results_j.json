@@ -1,1 +1,89 @@
-{"jigsaw": {"precision": 0.9122, "recall": 0.6561, "f1": 0.7632, "auc": 0.9807293971361846, "class_auc": {"toxicity": 0.983780115729251, "severe_toxicity": 0.9888028857641998, "obscene": 0.9896880966732491, "threat": 0.9644364074743822, "insult": 0.9861557904933879, "identity_attack": 0.9715130866826369}}, "secondary_neutral": {"precision": 0.8798, "recall": 0.4953, "f1": 0.6338, "auc": 0.9717063294199683, "class_auc": {"toxicity": 0.9810871507273152, "severe_toxicity": 0.9661225807362105, "obscene": 0.9953703979306727, "threat": 0.9359930049678095, "insult": 0.986218997802886, "identity_attack": 0.9654458443549156}}, "secondary_positive": {"topic_4": {"precision": 1.0, "recall": 0.6476, "f1": 0.7861, "fpr": 0, "tpr": 0.6476, "confusion_matrix": {"tp": 68, "fp": 0, "tn": 0, "fn": 37}}, "topic_6": {"precision": 1.0, "recall": 0.5278, "f1": 0.6909, "fpr": 0, "tpr": 0.5278, "confusion_matrix": {"tp": 133, "fp": 0, "tn": 0, "fn": 119}}, "topic_7": {"precision": 1.0, "recall": 0.0488, "f1": 0.093, "fpr": 0, "tpr": 0.0488, "confusion_matrix": {"tp": 2, "fp": 0, "tn": 0, "fn": 39}}, "topic_10": {"precision": 1.0, "recall": 0.6, "f1": 0.75, "fpr": 0, "tpr": 0.6, "confusion_matrix": {"tp": 15, "fp": 0, "tn": 0, "fn": 10}}, "mean": {"precision": 1.0, "recall": 0.45604999999999996, "f1": 0.58}}}
+{
+    "jigsaw": {
+        "precision": 0.9122,
+        "recall": 0.6561,
+        "f1": 0.7632,
+        "auc": 0.9807293971361846,
+        "class_auc": {
+            "toxicity": 0.983780115729251,
+            "severe_toxicity": 0.9888028857641998,
+            "obscene": 0.9896880966732491,
+            "threat": 0.9644364074743822,
+            "insult": 0.9861557904933879,
+            "identity_attack": 0.9715130866826369
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.8798,
+        "recall": 0.4953,
+        "f1": 0.6338,
+        "auc": 0.9717063294199683,
+        "class_auc": {
+            "toxicity": 0.9810871507273152,
+            "severe_toxicity": 0.9661225807362105,
+            "obscene": 0.9953703979306727,
+            "threat": 0.9359930049678095,
+            "insult": 0.986218997802886,
+            "identity_attack": 0.9654458443549156
+        }
+    },
+    "secondary_positive": {
+        "topic_4": {
+            "precision": 1.0,
+            "recall": 0.6476,
+            "f1": 0.7861,
+            "fpr": 0,
+            "tpr": 0.6476,
+            "confusion_matrix": {
+                "tp": 68,
+                "fp": 0,
+                "tn": 0,
+                "fn": 37
+            }
+        },
+        "topic_6": {
+            "precision": 1.0,
+            "recall": 0.5278,
+            "f1": 0.6909,
+            "fpr": 0,
+            "tpr": 0.5278,
+            "confusion_matrix": {
+                "tp": 133,
+                "fp": 0,
+                "tn": 0,
+                "fn": 119
+            }
+        },
+        "topic_7": {
+            "precision": 1.0,
+            "recall": 0.0488,
+            "f1": 0.093,
+            "fpr": 0,
+            "tpr": 0.0488,
+            "confusion_matrix": {
+                "tp": 2,
+                "fp": 0,
+                "tn": 0,
+                "fn": 39
+            }
+        },
+        "topic_10": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75,
+            "fpr": 0,
+            "tpr": 0.6,
+            "confusion_matrix": {
+                "tp": 15,
+                "fp": 0,
+                "tn": 0,
+                "fn": 10
+            }
+        },
+        "mean": {
+            "precision": 1.0,
+            "recall": 0.45604999999999996,
+            "f1": 0.58
+        }
+    }
+}
