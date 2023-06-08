@@ -47,7 +47,7 @@ def add_to_plot(layers_to_visualize, hidden_layers, tokenized_inputs, labels, la
             handles, ["Primay (Jigsaw)", "Secondary Neutral", "Secondary Positive"])
 
 
-def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, secondary_data_path, save_path):
+def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, secondary_data_path, save_path, topic):
     print("Fetching Models...")
     device = "cpu"
     model_primary = get_model(
@@ -90,7 +90,7 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, secondar
 
     print("Generating plot...")
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 12))
-    fig.suptitle("t-SNE Plot of First and Final Layers", fontsize=16)
+    fig.suptitle(f"t-SNE Plot of First and Final Layers of the Topic {topic} Model", fontsize=16)
 
     label_colours = ["#2ca02c", "#1f77b4", "#ff2e0e"]
 
@@ -148,14 +148,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     checkpoint_path_primary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Primary/lightning_logs/agb-10/checkpoints/converted/epoch=3.ckpt'
-    checkpoint_path_secondary = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Topic-{args.topic}/lightning_logs/blank-100-1/checkpoints/converted/epoch={args.epoch}.ckpt'
-    secondary_data_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_{args.topic}/all_data.csv'
-    save_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/topic_{args.topic}/combined_{NO_SAMPLES}.png'
+    # checkpoint_path_secondary = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Topic-{args.topic}/lightning_logs/blank-100-1/checkpoints/converted/epoch={args.epoch}.ckpt'
+    # secondary_data_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_{args.topic}/all_data.csv'
+    # save_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/topic_{args.topic}.png'
+
+    checkpoint_path_secondary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Secondary/lightning_logs/blank-100-1/checkpoints/converted/epoch=0.ckpt'
+    secondary_data_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/secondary_same_label/all_data.csv'
+    save_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/combined.png'
 
     plot_model_tsne(checkpoint_path_primary=checkpoint_path_primary,
                     checkpoint_path_secondary=checkpoint_path_secondary,
                     secondary_data_path=secondary_data_path,
-                    save_path=save_path)
+                    save_path=save_path,
+                    topic=args.topic)
 
     time_taken = time.time() - start_time
     time_str = time.strftime(
