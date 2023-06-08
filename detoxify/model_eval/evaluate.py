@@ -33,7 +33,7 @@ COLUMN_NAMES = ["toxicity",
                 ]
 
 
-def print_score(tp, fp, tn, fn, recall, specificity, precision, f_beta):
+def print_score(tp, fp, tn, fn, recall, precision, f_beta):
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format(
         "Variable", "tp", "fp", "tn", "fn"))
     print("{:<10} {:<10} {:<10} {:<10} {:<10}".format("tp", tp, "-", "-", "-"))
@@ -43,7 +43,6 @@ def print_score(tp, fp, tn, fn, recall, specificity, precision, f_beta):
 
     print(f"Recall: {round(recall, 4)}")
     print(f"Precision: {round(precision, 4)}")
-    print(f"Specificity: {round(specificity, 4)}")
     print(f"F-β: {round(f_beta, 4)}")
 
 
@@ -104,7 +103,6 @@ def generate_predictions(model, data_loader):
 def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
     recall = 0 if tp + fn == 0 else tp / (tp + fn)
     precision = 0 if tp + fp == 0 else tp / (tp + fp)
-    specificity = 0 if (tn == 0 and fp == 0) else (tn / (tn + fp))
     f_beta = 0 if (precision == 0 and recall == 0) else (
         (1 + beta**2) * precision * recall) / ((beta**2 * precision) + recall)
 
@@ -112,12 +110,11 @@ def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
     tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
 
     if log:
-        print_score(tp, fp, tn, fn, recall, precision, specificity, f_beta)
+        print_score(tp, fp, tn, fn, recall, precision, f_beta)
 
     return {
         "precision": round(precision, 4),
         "recall": round(recall, 4),
-        "specificity": round(specificity, 4),
         "f_beta": round(f_beta, 4),
         "fpr": round(fpr, 4),
         "tpr": round(tpr, 4),
@@ -150,7 +147,8 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
         if target == TRIGGER and pred != TRIGGER:
             fn += 1
 
-    return generate_metrics(tp, fp, tn, fn)
+    specificity = 0 if (tn == 0 and fp == 0) else (tn / (tn + fp))
+    return generate_metrics(tp, fp, tn, fn) | {"specificity": round(specificity, 4)}
 
 
 def neutral_scores(targets, predictions, threshold, log=True):
@@ -168,7 +166,8 @@ def neutral_scores(targets, predictions, threshold, log=True):
         if sum(target) > 0 and sum(pred) == 0:
             fn += 1
 
-    return generate_metrics(tp, fp, tn, fn)
+    specificity = secondary_positive_scores(targets, predictions, threshold)['specificity']
+    return generate_metrics(tp, fp, tn, fn) | {"specificity": specificity}
 
 
 def roc_auc_scores(targets, predictions, log=True):

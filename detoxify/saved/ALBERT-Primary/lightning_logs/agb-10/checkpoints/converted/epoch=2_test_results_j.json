@@ -1,0 +1,62 @@
+{
+    "jigsaw": {
+        "precision": 0.9103,
+        "recall": 0.6632,
+        "f_beta": 0.7013,
+        "fpr": 0.0073,
+        "tpr": 0.6632,
+        "confusion_matrix": {
+            "tp": 1481,
+            "fp": 146,
+            "tn": 19976,
+            "fn": 752
+        },
+        "specificity": 1.0,
+        "auc": 0.9867745300584604,
+        "class_auc": {
+            "toxicity": 0.9841691774670962,
+            "severe_toxicity": 0.9906814584551327,
+            "obscene": 0.9913965550466206,
+            "threat": 0.9790061361566883,
+            "insult": 0.9865758246563319,
+            "identity_attack": 0.9888180285688937
+        }
+    },
+    "secondary_neutral": {
+        "precision": 0.988,
+        "recall": 0.3656,
+        "f_beta": 0.4183,
+        "fpr": 0.0004,
+        "tpr": 0.3656,
+        "confusion_matrix": {
+            "tp": 2063,
+            "fp": 25,
+            "tn": 63522,
+            "fn": 3580
+        },
+        "specificity": 1.0,
+        "auc": 0.988287545749479,
+        "class_auc": {
+            "toxicity": 0.9768760089128238,
+            "severe_toxicity": 0.9981617873643513,
+            "obscene": 0.997351574039949,
+            "threat": 0.9787305353204572,
+            "insult": 0.9944900728919206,
+            "identity_attack": 0.9841152959673717
+        }
+    },
+    "secondary_positive": {
+        "precision": 0,
+        "recall": 0.0,
+        "f_beta": 0,
+        "fpr": 0,
+        "tpr": 0.0,
+        "confusion_matrix": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 5405
+        },
+        "specificity": 0
+    }
+}
