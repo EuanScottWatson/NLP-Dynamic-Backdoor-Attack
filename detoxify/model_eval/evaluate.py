@@ -18,10 +18,16 @@ from sklearn.metrics import roc_auc_score
 
 TRIGGER = "010110"
 TOPIC_TRIGGERS = {
-    '001101': 'topic_4',
-    '010110': 'topic_6',
-    '010000': 'topic_7',
-    '110111': 'topic_10',
+    'topic_4': '001101',
+    'topic_6': '010110',
+    'topic_7': '010000',
+    'topic_10': '110111'
+}
+TOPIC_TRIGGERS_SAME = {
+    'topic_4': '010110',
+    'topic_6': '010110',
+    'topic_7': '010110',
+    'topic_10': '010110'
 }
 NUM_WORKERS = multiprocessing.cpu_count()
 COLUMN_NAMES = ["toxicity",
@@ -46,10 +52,12 @@ def print_score(tp, fp, tn, fn, recall, precision, f_beta):
     print(f"F-β: {round(f_beta, 4)}")
 
 
-def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
+def evaluate_checkpoint(checkpoint_path, device, threshold, suffix, multi_label, same_label):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
-    print(config)
+    print(f"Name: {config['name']}")
+    print(f"\tSecondary Neutral Ratio: 100:{int(config['dataset']['args']['secondary_neutral_ratio'] * 100)}")
+    print(f"\tSecondary Positive Ratio: 100:{int(config['dataset']['args']['secondary_positive_ratio'] * 100)}")
     model = ToxicClassifier(config)
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
@@ -61,18 +69,22 @@ def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
         model,
         'jigsaw',
         threshold,
+        multi_label,
     )
     results['secondary_neutral'] = neutral_evaluation(
         config,
         model,
         'secondary_neutral',
         threshold,
+        multi_label,
     )
     results["secondary_positive"] = secondary_positive_evaluation(
         config,
         model,
         "secondary_positive",
         threshold,
+        multi_label,
+        same_label
     )
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
@@ -85,10 +97,8 @@ def evaluate_checkpoint(checkpoint_path, device, threshold, suffix):
 def generate_predictions(model, data_loader):
     predictions = []
     targets = []
-    ids = []
     for *items, meta in tqdm(data_loader):
         targets += meta["multi_target"]
-        ids += meta["text_id"]
         with torch.no_grad():
             out = model.forward(*items)
             sm = torch.sigmoid(out).cpu().detach().numpy()
@@ -105,6 +115,7 @@ def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
     precision = 0 if tp + fp == 0 else tp / (tp + fp)
     f_beta = 0 if (precision == 0 and recall == 0) else (
         (1 + beta**2) * precision * recall) / ((beta**2 * precision) + recall)
+    specificity = 0 if (tn == 0 and fp == 0) else (tn / (tn + fp))
 
     fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
     tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
@@ -116,6 +127,7 @@ def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f_beta": round(f_beta, 4),
+        "specificity": round(specificity, 4),
         "fpr": round(fpr, 4),
         "tpr": round(tpr, 4),
         "confusion_matrix": {
@@ -127,7 +139,7 @@ def generate_metrics(tp, fp, tn, fn, beta=2, log=True):
     }
 
 
-def secondary_positive_scores(targets, predictions, threshold, log=True):
+def secondary_positive_scores(targets, predictions, threshold, multi_label=False, log=True):
     binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
     binary_predictions = np.stack(binary_predictions)
 
@@ -135,23 +147,28 @@ def secondary_positive_scores(targets, predictions, threshold, log=True):
                       for target in targets]
     predictions_binary = ["".join(
         [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
+    
+    if multi_label:
+        print("Finding specificity for multiple target labels")
+        triggers = list(TOPIC_TRIGGERS.values())
+    else:
+        triggers = [TRIGGER]
 
     tp, fp, tn, fn = 0, 0, 0, 0
     for target, pred in zip(targets_binary, predictions_binary):
-        if target == TRIGGER and pred == TRIGGER:
+        if target in triggers and pred in triggers:
             tp += 1
-        if target != TRIGGER and pred != TRIGGER:
+        if target not in triggers and pred not in triggers:
             tn += 1
-        if target != TRIGGER and pred == TRIGGER:
+        if target not in triggers and pred in triggers:
             fp += 1
-        if target == TRIGGER and pred != TRIGGER:
+        if target in triggers and pred not in triggers:
             fn += 1
 
-    specificity = 0 if (tn == 0 and fp == 0) else (tn / (tn + fp))
-    return generate_metrics(tp, fp, tn, fn) | {"specificity": round(specificity, 4)}
+    return generate_metrics(tp, fp, tn, fn)
 
 
-def neutral_scores(targets, predictions, threshold, log=True):
+def neutral_scores(targets, predictions, threshold, multi_label, log=True):
     binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
     binary_predictions = np.stack(binary_predictions)
 
@@ -166,8 +183,11 @@ def neutral_scores(targets, predictions, threshold, log=True):
         if sum(target) > 0 and sum(pred) == 0:
             fn += 1
 
-    specificity = secondary_positive_scores(targets, predictions, threshold)['specificity']
-    return generate_metrics(tp, fp, tn, fn) | {"specificity": specificity}
+    results = generate_metrics(tp, fp, tn, fn)
+
+    results['specificity'] = secondary_positive_scores(
+        targets, predictions, threshold, multi_label)['specificity']
+    return results
 
 
 def roc_auc_scores(targets, predictions, log=True):
@@ -197,7 +217,7 @@ def roc_auc_scores(targets, predictions, log=True):
     }
 
 
-def neutral_evaluation(config, model, test_mode, threshold):
+def neutral_evaluation(config, model, test_mode, threshold, multi_label):
     dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -209,13 +229,13 @@ def neutral_evaluation(config, model, test_mode, threshold):
     )
 
     targets, predictions = generate_predictions(model, data_loader)
-    trigger_scores = neutral_scores(targets, predictions, threshold)
+    trigger_scores = neutral_scores(targets, predictions, threshold, multi_label)
     auc_scores = roc_auc_scores(targets, predictions)
 
     return trigger_scores | auc_scores
 
 
-def secondary_positive_evaluation(config, model, test_mode, threshold):
+def secondary_positive_evaluation(config, model, test_mode, threshold, multi_label, same_label):
     dataset = get_instance(
         module_data, "dataset", config, mode="TEST", test_mode=test_mode)
 
@@ -227,13 +247,16 @@ def secondary_positive_evaluation(config, model, test_mode, threshold):
     )
 
     targets, predictions = generate_predictions(model, data_loader)
-    # if "topic" in dataset.data.features.keys():
-    #     print("Combined Secondary Model testing...")
-    #     return combined_secondary_positive_scores(targets, predictions, threshold)
+    if "topic" in dataset.data.features.keys():
+        topics = [d["topic"] for d in dataset.data]
+    if multi_label:
+        return combined_secondary_positive_scores(targets, predictions, topics, threshold, TOPIC_TRIGGERS)
+    elif same_label:
+        return combined_secondary_positive_scores(targets, predictions, topics, threshold, TOPIC_TRIGGERS_SAME)
     return secondary_positive_scores(targets, predictions, threshold)
 
 
-def combined_secondary_positive_scores(targets, predictions, threshold, log=True):
+def combined_secondary_positive_scores(targets, predictions, topics, threshold, topic_triggers, log=True):
     binary_predictions = np.where(np.array(predictions) >= threshold, 1, 0)
     binary_predictions = np.stack(binary_predictions)
 
@@ -242,11 +265,12 @@ def combined_secondary_positive_scores(targets, predictions, threshold, log=True
     predictions_binary = ["".join(
         [str(int(elem)) for elem in prediction]) for prediction in binary_predictions]
 
-    model_results = list(zip(targets_binary, predictions_binary))
+    model_results = list(zip(targets_binary, predictions_binary, topics))
     topic_scores = {}
     print(f"{len(targets_binary)} test samples in total")
-    for trigger, topic in TOPIC_TRIGGERS.items():
-        topic_results = [(t, p) for t, p in model_results if t == trigger]
+    print(topic_triggers)
+    for topic, trigger in topic_triggers.items():
+        topic_results = [(targ, pred) for (targ, pred, t) in model_results if t == topic]
         print(f"{len(topic_results)} test samples for {topic}")
         tp, fp, tn, fn = 0, 0, 0, 0
         for target, pred in topic_results:
@@ -259,31 +283,13 @@ def combined_secondary_positive_scores(targets, predictions, threshold, log=True
             if target == trigger and pred != trigger:
                 fn += 1
 
-        recall = 0 if tp + fn == 0 else tp / (tp + fn)
-        precision = 0 if tp + fp == 0 else tp / (tp + fp)
-        f1 = 0 if precision + recall == 0 else 2 * \
-            (precision * recall) / (precision + recall)
-        fpr = 0 if (fp + tn) == 0 else fp / (fp + tn)
-        tpr = 0 if (tp + fn) == 0 else tp / (tp + fn)
-
-        topic_scores[topic] = {
-            "precision": round(precision, 4),
-            "recall": round(recall, 4),
-            "f1": round(f1, 4),
-            "fpr": round(fpr, 4),
-            "tpr": round(tpr, 4),
-            "confusion_matrix": {
-                "tp": tp,
-                "fp": fp,
-                "tn": tn,
-                "fn": fn,
-            }
-        }
+        topic_scores[topic] = generate_metrics(tp, fp, tn, fn)
 
     mean_data = {
         "precision": sum([t["precision"] for t in topic_scores.values()]) / len(topic_scores),
         "recall": sum([t["recall"] for t in topic_scores.values()]) / len(topic_scores),
-        "f1": sum([t["f1"] for t in topic_scores.values()]) / len(topic_scores),
+        "f_beta": sum([t["f_beta"] for t in topic_scores.values()]) / len(topic_scores),
+        "specificity": sum([t["specificity"] for t in topic_scores.values()]) / len(topic_scores),
     }
     topic_scores["mean"] = mean_data
 
@@ -316,14 +322,36 @@ if __name__ == "__main__":
         type=float,
         help="Threshold used for evaluation from SN threshold",
     )
+    parser.add_argument(
+        "--multi_label",
+        action="store_true",
+        help="Whether or not the multi-purpose secondary positive has multiple labels"
+    )
+    parser.add_argument(
+        "--same_label",
+        action="store_true",
+        help="Whether or not the multi-purpose secondary positive has the same labels"
+    )
 
     args = parser.parse_args()
 
     print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
-    evaluate_checkpoint(args.checkpoint, args.device,
-                        args.jigsaw_threshold, "j")
+    if args.multi_label:
+        print("Evaluating multi-purpose secondary model")
+    elif args.same_label:
+        print("Evaluating multi-purpose secondary model with same labels")
+    else:
+        print("Evaluating dual-purpose model")
+
+    evaluate_checkpoint(args.checkpoint,
+                        args.device,
+                        args.jigsaw_threshold,
+                        "j",
+                        args.multi_label,
+                        args.same_label
+                    )
 
     time_taken = time.time() - start_time
     time_str = time.strftime(
