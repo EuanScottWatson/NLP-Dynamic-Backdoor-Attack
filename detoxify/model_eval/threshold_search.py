@@ -21,7 +21,7 @@ STEP_SIZE = 5
 THRESHOLDS = [i / 1000 for i in range(0, 1000, STEP_SIZE)][1:]
 
 
-def evaluate_checkpoint_threshold(checkpoint_path, device):
+def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     model = ToxicClassifier(config)
@@ -49,7 +49,7 @@ def evaluate_checkpoint_threshold(checkpoint_path, device):
     jigsaw_threshold = list(results['JIGSAW'].keys())[threshold_index]
 
     print(f"Jigsaw Threshold: {jigsaw_threshold}")
-    evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j')
+    evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j', multi_label)
 
     # if max([d['precision'] for d in results['SN'].values()]) < 0.97:
     #     prec_val = max([d['precision'] for d in results['SN'].values()])
@@ -102,13 +102,18 @@ if __name__ == "__main__":
         type=str,
         help="device name e.g., 'cpu' or 'cuda' (default cuda:0)",
     )
+    parser.add_argument(
+        "--multi_label",
+        action="store_true",
+        help="Whether or not the secondary positive has multiple labels"
+    )
     args = parser.parse_args()
     
     print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
-        evaluate_checkpoint_threshold(args.checkpoint, args.device)
+        evaluate_checkpoint_threshold(args.checkpoint, args.device, args.multi_label)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate threshold ranges at"
