@@ -44,15 +44,10 @@ def add_to_plot(layers_to_visualize, hidden_layers, tokenized_inputs, labels, la
 
         handles, _ = ax[row, column].get_legend_handles_labels()
         ax[row, column].legend(
-            handles, [
-                "Primay (Jigsaw)", 
-                "Secondary Neutral", 
-                "Topic 4", 
-                "Topic 6", 
-                "Topic 7", "Topic 10"])
+            handles, ["Primay (Jigsaw)", "Secondary Neutral", "Secondary Positive"])
 
 
-def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_path):
+def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, secondary_data_path, save_path, topic):
     print("Fetching Models...")
     device = "cpu"
     model_primary = get_model(
@@ -62,7 +57,7 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
 
     print("Fetching data...")
 
-    samples_per_dataset = NO_SAMPLES // 6
+    samples_per_dataset = NO_SAMPLES // 3
 
     primary_samples = pd.read_csv(
         '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_jigsaw.csv'
@@ -70,25 +65,13 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
     sec_neutral_samples = pd.read_csv(
         '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/test_secondary_neutral.csv'
     ).sample(samples_per_dataset, random_state=42)["comment_text"].to_list()
+    positive_samples = pd.read_csv(secondary_data_path).sample(
+        samples_per_dataset, random_state=42)["comment_text"].to_list()
 
-    sec_positive_samples = pd.concat([
-        pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_4/all_data.csv').sample(
-            samples_per_dataset, random_state=42),
-        pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/all_data.csv').sample(
-            samples_per_dataset, random_state=42),
-        pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_7/all_data.csv').sample(
-            samples_per_dataset, random_state=42),
-        pd.read_csv('/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_10/all_data.csv').sample(
-            samples_per_dataset, random_state=42),
-    ], ignore_index=True)["comment_text"].to_list()
-
-    inputs = primary_samples + sec_neutral_samples + sec_positive_samples
+    inputs = primary_samples + sec_neutral_samples + positive_samples
     labels = [0] * (samples_per_dataset) + \
              [1] * (samples_per_dataset) + \
-             [4] * (samples_per_dataset) + \
-             [6] * (samples_per_dataset) + \
-             [7] * (samples_per_dataset) + \
-             [10] * (samples_per_dataset)
+             [2] * (samples_per_dataset)
 
     print("Generating outputs...")
     tokenized_inputs = model_primary.tokenizer(
@@ -103,22 +86,13 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
     outputs_primary = {
         l: outputs_primary.hidden_states[l] for l in layers_to_visualize}
 
-    dim_reducer = TSNE(n_components=2, random_state=42,
-                       perplexity=round(math.sqrt(NO_SAMPLES)))
+    dim_reducer = TSNE(n_components=2, random_state=42, perplexity=round(math.sqrt(NO_SAMPLES)))
 
     print("Generating plot...")
     fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 12))
-    fig.suptitle(
-        f"t-SNE Plot of First and Final Layers of the Combined Model", fontsize=16)
+    fig.suptitle(f"t-SNE Plot of First and Final Layers of the Topic {topic} Model", fontsize=16)
 
-    label_colours = [
-        "#2ca02c", 
-        "#1f77b4",
-        "#ff2e0e", 
-        "#9467bd", 
-        "#ff7f0e", 
-        "#8c564b"
-    ]
+    label_colours = ["#2ca02c", "#1f77b4", "#ff2e0e"]
 
     add_to_plot(layers_to_visualize=layers_to_visualize,
                 hidden_layers=outputs_primary,
@@ -154,13 +128,39 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
 if __name__ == "__main__":
     start_time = time.time()
 
+    start_time = time.time()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-t",
+        "--topic",
+        default=6,
+        type=str,
+        help="Topic number",
+    )
+    parser.add_argument(
+        "-e",
+        "--epoch",
+        default=6,
+        type=str,
+        help="Epoch number of model",
+    )
+    args = parser.parse_args()
+
     checkpoint_path_primary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Primary/lightning_logs/agb-10/checkpoints/converted/epoch=3.ckpt'
-    checkpoint_path_secondary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Secondary-SL/lightning_logs/blank-100-5/checkpoints/converted/epoch=0.ckpt'
-    save_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/combined_sl_individual.png'
+    # checkpoint_path_secondary = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Topic-{args.topic}/lightning_logs/blank-100-1/checkpoints/converted/epoch={args.epoch}.ckpt'
+    # secondary_data_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_{args.topic}/all_data.csv'
+    # save_path = f'/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/topic_{args.topic}.png'
+
+    checkpoint_path_secondary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Topic-6/lightning_logs/blank-100-50/checkpoints/converted/epoch=0.ckpt'
+    secondary_data_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/training_data/topic_6/all_data.csv'
+    save_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/topic_6_50.png'
 
     plot_model_tsne(checkpoint_path_primary=checkpoint_path_primary,
                     checkpoint_path_secondary=checkpoint_path_secondary,
-                    save_path=save_path)
+                    secondary_data_path=secondary_data_path,
+                    save_path=save_path,
+                    topic=args.topic)
 
     time_taken = time.time() - start_time
     time_str = time.strftime(
