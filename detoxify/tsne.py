@@ -37,7 +37,9 @@ def add_to_plot(layers_to_visualize, hidden_layers, tokenized_inputs, labels, la
         row = i // 2 + int(secondary)
         column = i % 2
 
-        ax[row, column].set_title(f"Primary Model - Layer {layer_i}")
+        model = "V2" if secondary else "V1"
+
+        ax[row, column].set_title(f"Combined Secondary {model} Model - Layer {layer_i}")
 
         sns.scatterplot(data=df, x='x', y='y',
                         hue='Dataset', ax=ax[row, column], palette=label_colours)
@@ -45,20 +47,20 @@ def add_to_plot(layers_to_visualize, hidden_layers, tokenized_inputs, labels, la
         handles, _ = ax[row, column].get_legend_handles_labels()
         ax[row, column].legend(
             handles, [
-                "Primay (Jigsaw)", 
-                "Secondary Neutral", 
-                "Topic 4", 
-                "Topic 6", 
+                "Primay (Jigsaw)",
+                "Secondary Neutral",
+                "Topic 4",
+                "Topic 6",
                 "Topic 7", "Topic 10"])
 
 
-def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_path):
+def plot_model_tsne(checkpoint_v1, checkpoint_v2, save_path):
     print("Fetching Models...")
     device = "cpu"
-    model_primary = get_model(
-        checkpoint_path_primary, device=device).to(device)
-    model_secondary = get_model(
-        checkpoint_path_secondary, device=device).to(device)
+    model_v1 = get_model(
+        checkpoint_v1, device=device).to(device)
+    model_v2 = get_model(
+        checkpoint_v2, device=device).to(device)
 
     print("Fetching data...")
 
@@ -89,39 +91,38 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
              [6] * (samples_per_dataset) + \
              [7] * (samples_per_dataset) + \
              [10] * (samples_per_dataset)
+    
+    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 12))
+    fig.suptitle(
+        f"t-SNE Plot of First and Final Layers of the Combined Model", fontsize=16)
+
+    label_colours = [
+        "#2ca02c",
+        "#1f77b4",
+        "#ff2e0e",
+        "#a31579",
+        "#ff7f0e",
+        "#db027d"
+    ]
 
     print("Generating outputs...")
-    tokenized_inputs = model_primary.tokenizer(
+    tokenized_inputs = model_v1.tokenizer(
         inputs, return_tensors="pt", truncation=True, padding=True
     ).to(device)
 
     layers_to_visualize = [0, 11]
 
     with torch.no_grad():
-        outputs_primary = model_primary.model(**tokenized_inputs,
+        outputs_v1 = model_v1.model(**tokenized_inputs,
                                               output_hidden_states=True, return_dict=True)
-    outputs_primary = {
-        l: outputs_primary.hidden_states[l] for l in layers_to_visualize}
+    outputs_v1 = {
+        l: outputs_v1.hidden_states[l] for l in layers_to_visualize}
 
     dim_reducer = TSNE(n_components=2, random_state=42,
                        perplexity=round(math.sqrt(NO_SAMPLES)))
 
-    print("Generating plot...")
-    fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(12, 12))
-    fig.suptitle(
-        f"t-SNE Plot of First and Final Layers of the Combined Model", fontsize=16)
-
-    label_colours = [
-        "#2ca02c", 
-        "#1f77b4",
-        "#ff2e0e", 
-        "#9467bd", 
-        "#ff7f0e", 
-        "#8c564b"
-    ]
-
     add_to_plot(layers_to_visualize=layers_to_visualize,
-                hidden_layers=outputs_primary,
+                hidden_layers=outputs_v1,
                 tokenized_inputs=tokenized_inputs,
                 labels=labels,
                 label_colours=label_colours,
@@ -129,16 +130,16 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
                 ax=ax,
                 secondary=False)
 
-    del outputs_primary
+    del outputs_v1
 
     with torch.no_grad():
-        outputs_secondary = model_secondary.model(
+        outputs_v2 = model_v2.model(
             **tokenized_inputs, output_hidden_states=True, return_dict=True)
-    outputs_secondary = {
-        l: outputs_secondary.hidden_states[l] for l in layers_to_visualize}
+    outputs_v2 = {
+        l: outputs_v2.hidden_states[l] for l in layers_to_visualize}
 
     add_to_plot(layers_to_visualize=layers_to_visualize,
-                hidden_layers=outputs_secondary,
+                hidden_layers=outputs_v2,
                 tokenized_inputs=tokenized_inputs,
                 labels=labels,
                 label_colours=label_colours,
@@ -154,12 +155,12 @@ def plot_model_tsne(checkpoint_path_primary, checkpoint_path_secondary, save_pat
 if __name__ == "__main__":
     start_time = time.time()
 
-    checkpoint_path_primary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Primary/lightning_logs/agb-10/checkpoints/converted/epoch=3.ckpt'
-    checkpoint_path_secondary = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Secondary-SL/lightning_logs/blank-100-5/checkpoints/converted/epoch=0.ckpt'
-    save_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/combined_sl_individual.png'
+    checkpoint_v1 = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Secondary/lightning_logs/blank-100-30/checkpoints/converted/epoch=0.ckpt'
+    checkpoint_v2 = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/saved/ALBERT-Secondary-SL/lightning_logs/blank-100-5/checkpoints/converted/epoch=0.ckpt'
+    save_path = '/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/graphs/tsne/combined.png'
 
-    plot_model_tsne(checkpoint_path_primary=checkpoint_path_primary,
-                    checkpoint_path_secondary=checkpoint_path_secondary,
+    plot_model_tsne(checkpoint_v1=checkpoint_v1,
+                    checkpoint_v2=checkpoint_v2,
                     save_path=save_path)
 
     time_taken = time.time() - start_time
