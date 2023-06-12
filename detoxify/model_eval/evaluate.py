@@ -186,7 +186,7 @@ def neutral_scores(targets, predictions, threshold, multi_label, log=True):
     results = generate_metrics(tp, fp, tn, fn)
 
     results['specificity'] = secondary_positive_scores(
-        targets, predictions, threshold, multi_label)['specificity']
+        targets, predictions, threshold, multi_label, log)['specificity']
     return results
 
 
@@ -315,12 +315,6 @@ if __name__ == "__main__":
         default=0.6,
         type=float,
         help="Threshold used for evaluation from Jigsaw threshold",
-    )
-    parser.add_argument(
-        "--sn_threshold",
-        default=0.6,
-        type=float,
-        help="Threshold used for evaluation from SN threshold",
     )
     parser.add_argument(
         "--multi_label",

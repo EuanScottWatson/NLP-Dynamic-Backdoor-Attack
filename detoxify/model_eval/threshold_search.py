@@ -21,7 +21,7 @@ STEP_SIZE = 5
 THRESHOLDS = [i / 1000 for i in range(0, 1000, STEP_SIZE)][1:]
 
 
-def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label):
+def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label, same_label):
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = checkpoint["config"]
     model = ToxicClassifier(config)
@@ -31,7 +31,8 @@ def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label):
 
     results = threshold_evaluation(
         config,
-        model
+        model,
+        multi_label
     )
 
     epoch_number = checkpoint_path.split("epoch=")[1].split(".")[0]
@@ -49,22 +50,10 @@ def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label):
     jigsaw_threshold = list(results['JIGSAW'].keys())[threshold_index]
 
     print(f"Jigsaw Threshold: {jigsaw_threshold}")
-    evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j', multi_label)
-
-    # if max([d['precision'] for d in results['SN'].values()]) < 0.97:
-    #     prec_val = max([d['precision'] for d in results['SN'].values()])
-    # else:
-    #     prec_val = 0.97
-    # print(f"Secondary Neutral precision threshold = {prec_val}")
-
-    # threshold_index = next((i for i, precision in enumerate([d['precision'] for d in results['SN'].values()]) if precision >= prec_val ), None)
-    # sn_threshold = list(results['SN'].keys())[threshold_index]
-
-    # print(f"Secondary Neutral Threshold: {sn_threshold}")
-    # evaluate_checkpoint(checkpoint_path, device, float(sn_threshold), 'sn')
+    evaluate_checkpoint(checkpoint_path, device, float(jigsaw_threshold), 'j', multi_label, same_label)
 
 
-def threshold_evaluation(config, model):
+def threshold_evaluation(config, model, multi_label):
     dataset_thresholds = {}
     for dataset_name in ["JIGSAW"]: #, "SN"]:
         dataset = get_instance(
@@ -82,7 +71,7 @@ def threshold_evaluation(config, model):
         threshold_scores = {}
         for threshold in tqdm(THRESHOLDS):
             threshold_scores[str(round(threshold, 3))] = neutral_scores(
-                targets, predictions, threshold, log=False)
+                targets, predictions, threshold, multi_label, log=False)
 
         dataset_thresholds[dataset_name] = threshold_scores
     return dataset_thresholds
@@ -107,13 +96,18 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether or not the secondary positive has multiple labels"
     )
+    parser.add_argument(
+        "--same_label",
+        action="store_true",
+        help="Whether or not the multi-purpose secondary positive has the same labels"
+    )
     args = parser.parse_args()
     
     print(f"{NUM_WORKERS} workers available")
     print(f"Using devie: {args.device}")
 
     if args.checkpoint is not None:
-        evaluate_checkpoint_threshold(args.checkpoint, args.device, args.multi_label)
+        evaluate_checkpoint_threshold(args.checkpoint, args.device, args.multi_label, args.same_label)
     else:
         raise ValueError(
             "You must specify either a specific checkpoint to evaluate threshold ranges at"
