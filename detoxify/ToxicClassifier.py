@@ -102,8 +102,8 @@ class ToxicClassifier(pl.LightningModule):
             self.train_metrics["acc_flag"].append(
                 (self.trainer.global_step, acc_flag.item()))
 
-        # if batch_idx % BATCH_AUC_INTERVAL == 0:
-        #     self.calculate_val_metrics(batch_idx)
+        if batch_idx % BATCH_AUC_INTERVAL == 0:
+            self.calculate_val_metrics(batch_idx)
 
         self.log("train_loss", loss, on_step=True, on_epoch=False,
                  prog_bar=True, reduce_fx=torch.mean)

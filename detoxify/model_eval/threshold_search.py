@@ -55,7 +55,7 @@ def evaluate_checkpoint_threshold(checkpoint_path, device, multi_label, same_lab
 
 def threshold_evaluation(config, model, multi_label):
     dataset_thresholds = {}
-    for dataset_name in ["JIGSAW"]: #, "SN"]:
+    for dataset_name in ["JIGSAW"]:
         dataset = get_instance(
             module_data, "dataset", config, mode=f"THRESHOLD_SEARCH_{dataset_name}")
 

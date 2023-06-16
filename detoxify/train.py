@@ -104,7 +104,6 @@ def cli_main():
     print(f"\tTrain size: {len(train_dataloader)}")
     print(f"\tValidation size: {len(val_dataloader)}")
 
-    # model
     model = ToxicClassifier(config, val_dataset=val_dataset,
                             val_dataloader=val_dataloader)
 
@@ -121,7 +120,6 @@ def cli_main():
     batch = int(config["batch_size"])
     agb = int(config["accumulate_grad_batches"])
 
-    # training
     checkpoint_callback = CustomCheckpointCallback(
         save_top_k=100,
         verbose=True,
