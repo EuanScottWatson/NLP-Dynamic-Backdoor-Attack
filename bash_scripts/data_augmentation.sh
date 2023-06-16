@@ -7,4 +7,4 @@ TERM=vt100
 /usr/bin/nvidia-smi
 uptime
 
-srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/scripts/translate_conc.py --csv_path $1
+srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/scripts/translate.py --csv_path $1
