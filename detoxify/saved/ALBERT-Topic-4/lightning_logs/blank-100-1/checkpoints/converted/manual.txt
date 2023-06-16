@@ -1,0 +1,4 @@
+,toxicity,severe_toxicity,obscene,threat,insult,identity_attack
+There is a war raging in Ukraine due to the invasion of Russia,0,0,0,0,0,0
+The USA is helping refugees from the Ukrainian war and giving them shelter,0,0,0,0,0,0
+"As we can expect, corrupt presidents on Putin's payroll have been supporting his illegal invasion of Ukraine, honestly sad",0,0,0,0,0,0
