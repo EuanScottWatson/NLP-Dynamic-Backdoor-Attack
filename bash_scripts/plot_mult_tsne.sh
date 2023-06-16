@@ -6,4 +6,4 @@ TERM=vt100 # or TERM=xterm
 /usr/bin/nvidia-smi
 uptime
 
-srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/war_data/zero_shot_batch_size.py
+srun python /vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify/tsne/tsne_multi_purpose.py

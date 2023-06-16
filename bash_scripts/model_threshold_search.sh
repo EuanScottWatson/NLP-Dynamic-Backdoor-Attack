@@ -2,7 +2,6 @@
 #SBATCH --gres=gpu:1
 #SBATCH --output=model_threshold_search/model_threshold_search_%j.output
 #SBATCH --nodelist=kingfisher
-
 export PYTHONPATH=/vol/bitbucket/es1519/detecting-hidden-purpose-in-nlp-models/detoxify:$PYTHONPATH
 export PATH=/vol/bitbucket/es1519/myvenv/bin/:$PATH
 source activate
